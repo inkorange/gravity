@@ -27,12 +27,12 @@ Phase 0 is partially complete:
 **Goal**: `pnpm dev` serves a dark-themed empty page. All tooling works.
 
 ### Remaining work
-- [ ] Replace `page.tsx` boilerplate with minimal dark page + "Gravity Playground" title
-- [ ] Verify `pnpm build` succeeds with static export
-- [ ] Verify `pnpm dev` runs clean (no errors)
-- [ ] Create `src/types/index.ts` with core TypeScript interfaces (`CelestialBody`, `DroppableObject`, `DropState`, `SimulationState`)
-- [ ] Create `src/lib/constants.ts` with physics constants (drop height, time scale target, restitution)
-- [ ] Clean up unused default assets (`file.svg`, `globe.svg`, `window.svg`, `next.svg`, `vercel.svg`)
+- [x] Replace `page.tsx` boilerplate with minimal dark page + "Gravity Playground" title
+- [x] Verify `pnpm build` succeeds with static export
+- [x] Verify `pnpm dev` runs clean (no errors)
+- [x] Create `src/types/index.ts` with core TypeScript interfaces (`CelestialBody`, `DroppableObject`, `DropState`, `SimulationState`)
+- [x] Create `src/lib/constants.ts` with physics constants (drop height, time scale target, restitution)
+- [x] Clean up unused default assets (`file.svg`, `globe.svg`, `window.svg`, `next.svg`, `vercel.svg`)
 
 ### Deliverable
 PR with working scaffold — dark page, all deps, all config, type definitions, empty directory structure.
@@ -44,16 +44,16 @@ PR with working scaffold — dark page, all deps, all config, type definitions, 
 **Goal**: All planet/object data defined. Physics engine produces correct results. Zero rendering.
 
 ### Tasks
-- [ ] `src/lib/planets.ts` — All 8 celestial bodies: Earth, Moon, Mars, Jupiter, Sun, Pluto, Europa, Titan. Each with gravity (m/s²), relative gravity, UI color, surface color, sky color, emoji, light color temperature, 3-5 fun facts
-- [ ] `src/lib/objects.ts` — All 6 droppable objects: bowling ball, feather, watermelon, elephant, astronaut, school bus. Each with mass, model path, scale, fallback color, emoji, squash-stretch parameters
-- [ ] `src/lib/physics.ts` — Pure functions (no React, no Three.js):
+- [x] `src/lib/planets.ts` — All 8 celestial bodies: Earth, Moon, Mars, Jupiter, Sun, Pluto, Europa, Titan. Each with gravity (m/s²), relative gravity, UI color, surface color, sky color, emoji, light color temperature, 3-5 fun facts
+- [x] `src/lib/objects.ts` — All 6 droppable objects: bowling ball, feather, watermelon, elephant, astronaut, school bus. Each with mass, model path, scale, fallback color, emoji, squash-stretch parameters
+- [x] `src/lib/physics.ts` — Pure functions (no React, no Three.js):
   - `calculatePosition(gravity, time, dropHeight)` → y position
   - `calculateVelocity(gravity, time)` → current speed
   - `calculateFallDuration(gravity, dropHeight)` → seconds to impact
   - `calculateTimeScale(gravity)` → multiplier (Earth drops ~2.5s from 20m, others proportional)
   - `calculateBounce(impactVelocity, restitution, bounceIndex)` → `{ height, duration }`
   - `calculateSquash(velocity, maxVelocity)` → `{ scaleX, scaleY, scaleZ }`
-- [ ] Validation: temporary test page or console output confirming fall durations for all 8 bodies are reasonable (Earth ~2.5s, Moon ~6s, Jupiter ~1.6s, Sun ~0.5s)
+- [x] Validation: temporary test page or console output confirming fall durations for all 8 bodies are reasonable (Earth ~2.5s, Moon ~6s, Jupiter ~1.6s, Sun ~0.5s)
 
 ### Deliverable
 PR with complete data definitions and a validated physics engine. Can be reviewed by reading the code and checking the math.
