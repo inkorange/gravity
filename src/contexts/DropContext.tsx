@@ -50,11 +50,18 @@ export function DropProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const drop = useCallback(() => {
+    // Enter anticipation phase first, then start dropping after a short delay
     setState((s) => ({
       ...s,
-      phase: "dropping",
+      phase: "anticipation",
       dropTimestamp: performance.now(),
     }));
+    setTimeout(() => {
+      setState((s) => {
+        if (s.phase !== "anticipation") return s;
+        return { ...s, phase: "dropping", dropTimestamp: performance.now() };
+      });
+    }, 200);
   }, []);
 
   const reset = useCallback(() => {

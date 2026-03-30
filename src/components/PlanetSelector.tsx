@@ -9,7 +9,7 @@ interface PlanetSelectorProps {
   side: "left" | "right";
 }
 
-export function PlanetSelector({ selectedId, onSelect, side }: PlanetSelectorProps) {
+export function PlanetSelector({ selectedId, onSelect }: PlanetSelectorProps) {
   return (
     <div className="flex gap-2 overflow-x-auto px-3 py-2 scrollbar-hide">
       {planets.map((planet) => {
@@ -20,7 +20,22 @@ export function PlanetSelector({ selectedId, onSelect, side }: PlanetSelectorPro
             onClick={() => onSelect(planet.id)}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            animate={
+              isSelected
+                ? {
+                    boxShadow: [
+                      `0 0 8px ${planet.color}40`,
+                      `0 0 16px ${planet.color}60`,
+                      `0 0 8px ${planet.color}40`,
+                    ],
+                  }
+                : { boxShadow: "0 0 0px transparent" }
+            }
+            transition={
+              isSelected
+                ? { boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" }, type: "spring", stiffness: 400, damping: 25 }
+                : { type: "spring", stiffness: 400, damping: 25 }
+            }
             className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl min-w-[70px] cursor-pointer transition-colors"
             style={{
               backgroundColor: isSelected ? planet.color + "25" : "rgba(255,255,255,0.05)",

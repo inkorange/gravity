@@ -32,6 +32,7 @@ export function PlanetScene({ planet, object, phase, side, onLand }: PlanetScene
         phase={phase}
         fallbackColor={object.fallbackColor}
         scale={object.scale}
+        squashFactor={object.squashFactor}
         side={side}
         onLand={onLand}
       />

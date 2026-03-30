@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { View } from "@react-three/drei";
 import { PlanetScene } from "./PlanetScene";
@@ -8,8 +8,11 @@ import { PlanetSelector } from "./PlanetSelector";
 import { HUD } from "./HUD";
 import { FunFact } from "./FunFact";
 import { useDropContext } from "@/contexts/DropContext";
+import { useScreenShake } from "@/hooks/useScreenShake";
+import { useSimData } from "@/hooks/useSimStore";
 import { getPlanetById } from "@/lib/planets";
 import { getObjectById } from "@/lib/objects";
+import { getMaxVelocity } from "@/lib/physics";
 
 export function ComparisonView() {
   const {
@@ -25,6 +28,7 @@ export function ComparisonView() {
   const leftRef = useRef<HTMLDivElement>(null!);
   const rightRef = useRef<HTMLDivElement>(null!);
   const canvasContainerRef = useRef<HTMLDivElement>(null!);
+  const { containerRef: shakeRef, trigger: triggerShake } = useScreenShake();
 
   const leftPlanet = getPlanetById(leftPlanetId)!;
   const rightPlanet = getPlanetById(rightPlanetId)!;
@@ -32,6 +36,25 @@ export function ComparisonView() {
 
   // Track landings — call land() when both sides have landed
   const landedCount = useRef(0);
+  const hasShaken = useRef(false);
+
+  const leftSim = useSimData("left");
+  const rightSim = useSimData("right");
+
+  // Trigger screen shake when landing
+  useEffect(() => {
+    if (phase === "landed" && !hasShaken.current) {
+      // Use the higher gravity planet for shake intensity
+      const maxGravity = Math.max(leftPlanet.gravity, rightPlanet.gravity);
+      const maxVel = getMaxVelocity(maxGravity);
+      const intensity = Math.min(maxVel / getMaxVelocity(274), 1); // Normalize against Sun
+      triggerShake(intensity);
+      hasShaken.current = true;
+    }
+    if (phase === "idle") {
+      hasShaken.current = false;
+    }
+  }, [phase, leftPlanet.gravity, rightPlanet.gravity, triggerShake]);
 
   const handleLand = useCallback(() => {
     landedCount.current += 1;
@@ -47,7 +70,7 @@ export function ComparisonView() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div ref={shakeRef} className="flex flex-col flex-1 min-h-0">
       {/* 3D Scenes */}
       <div ref={canvasContainerRef} className="relative flex flex-1 flex-col md:flex-row min-h-0">
         {/* Left panel */}
