@@ -65,15 +65,15 @@ PR with complete data definitions and a validated physics engine. Can be reviewe
 **Goal**: Two panels side-by-side, each with a colored ground plane and a colored box that falls when you click DROP IT. Physics are real. No real models — just colored shapes.
 
 ### Tasks
-- [ ] `src/contexts/DropContext.tsx` — React context for shared state: selected planets (left/right), selected object, drop state (`idle` | `ready` | `dropping` | `bouncing` | `landed`), synchronized timestamp
-- [ ] `src/hooks/useGravitySim.ts` — Connects `physics.ts` to R3F `useFrame`. Takes gravity + drop height + state. Returns position, velocity, progress, impact velocity. Uses time-scaled delta.
-- [ ] `src/components/Scene.tsx` — R3F `<Canvas>` wrapper, loaded via `next/dynamic` with `ssr: false`. Sets camera, background color
-- [ ] `src/components/ComparisonView.tsx` — Single Canvas with drei `<View>` for scissor-rendered split-screen. Two refs tracking left/right DOM panels
-- [ ] `src/components/PlanetSurface.tsx` — `<mesh>` with `<planeGeometry>` colored by planet's surface color
-- [ ] `src/components/DroppableObject.tsx` — `<mesh>` with `<boxGeometry>` colored by object's fallback color. Position driven by `useGravitySim`
-- [ ] `src/components/DropButton.tsx` — Triggers both simulations simultaneously via DropContext
-- [ ] Wire up in `page.tsx`: `<ComparisonView>` + `<DropButton>`, hardcode Earth/Moon as defaults
-- [ ] Basic lighting: ambient + directional with shadows on ground plane
+- [x] `src/contexts/DropContext.tsx` — React context for shared state: selected planets (left/right), selected object, drop state (`idle` | `ready` | `dropping` | `bouncing` | `landed`), synchronized timestamp
+- [x] `src/hooks/useGravitySim.ts` — Connects `physics.ts` to R3F `useFrame`. Takes gravity + drop height + state. Returns position, velocity, progress, impact velocity. Uses time-scaled delta.
+- [x] `src/components/Scene.tsx` — R3F `<Canvas>` wrapper, loaded via `next/dynamic` with `ssr: false`. Sets camera, background color
+- [x] `src/components/ComparisonView.tsx` — Single Canvas with drei `<View>` for scissor-rendered split-screen. Two refs tracking left/right DOM panels
+- [x] `src/components/PlanetSurface.tsx` — `<mesh>` with `<planeGeometry>` colored by planet's surface color
+- [x] `src/components/DroppableObject.tsx` — `<mesh>` with `<boxGeometry>` colored by object's fallback color. Position driven by `useGravitySim`
+- [x] `src/components/DropButton.tsx` — Triggers both simulations simultaneously via DropContext
+- [x] Wire up in `page.tsx`: `<ComparisonView>` + `<DropButton>`, hardcode Earth/Moon as defaults
+- [x] Basic lighting: ambient + directional with shadows on ground plane
 
 ### Architecture note
 Using a **single R3F Canvas with drei `<View>`** (scissor rendering) instead of two separate Canvas elements. This halves GPU memory and makes sync trivial.
