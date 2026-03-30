@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --bg-space: #0a0a1a;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0b0;
+
+  --color-earth: #4da6ff;
+  --color-moon: #c0c0c0;
+  --color-mars: #e07040;
+  --color-jupiter: #e0a050;
+  --color-sun: #ffcc00;
+  --color-pluto: #a0d0e0;
+  --color-europa: #80d0d0;
+  --color-titan: #d09030;
+}
+
+@theme inline {
+  --color-background: var(--bg-space);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-nunito);
+}
+
+body {
+  background: var(--bg-space);
+  color: var(--text-primary);
+  font-family: var(--font-nunito), Arial, Helvetica, sans-serif;
+  overflow: hidden;
+}
