@@ -8,10 +8,11 @@ interface PlanetSceneProps {
   planet: CelestialBody;
   object: DroppableObjectType;
   phase: DropPhase;
+  side: "left" | "right";
   onLand?: () => void;
 }
 
-export function PlanetScene({ planet, object, phase, onLand }: PlanetSceneProps) {
+export function PlanetScene({ planet, object, phase, side, onLand }: PlanetSceneProps) {
   return (
     <>
       <ambientLight intensity={0.4} />
@@ -31,6 +32,7 @@ export function PlanetScene({ planet, object, phase, onLand }: PlanetSceneProps)
         phase={phase}
         fallbackColor={object.fallbackColor}
         scale={object.scale}
+        side={side}
         onLand={onLand}
       />
       <color attach="background" args={[planet.skyColor]} />

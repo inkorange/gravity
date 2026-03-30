@@ -88,15 +88,15 @@ PR where you can open the app, see two colored planes with a box above each, pre
 **Goal**: Fully interactive UI. Pick any planet for either side, pick any object, drop, see live HUD, read fun facts. Still placeholder geometry, but feature-complete interaction.
 
 ### Tasks
-- [ ] `src/components/PlanetSelector.tsx` — Horizontal scrollable row of planet cards below each scene panel. Emoji + name + gravity. Framer Motion spring on hover/tap. Selected card gets colored border glow
-- [ ] `src/components/ObjectPicker.tsx` — Shared grid of object cards (2x3 or horizontal scroll). Emoji + name + mass. Framer Motion selection spring
-- [ ] `src/components/HUD.tsx` — Per-panel overlay: current speed (m/s), height remaining (m), surface gravity label. Updates every frame from simulation state
-- [ ] `src/components/FunFact.tsx` — Appears after both objects land. Random fact from planet's array. Framer Motion `AnimatePresence` fade-in
-- [ ] Responsive layout in `ComparisonView.tsx`:
+- [x] `src/components/PlanetSelector.tsx` — Horizontal scrollable row of planet cards below each scene panel. Emoji + name + gravity. Framer Motion spring on hover/tap. Selected card gets colored border glow
+- [x] `src/components/ObjectPicker.tsx` — Shared grid of object cards (2x3 or horizontal scroll). Emoji + name + mass. Framer Motion selection spring
+- [x] `src/components/HUD.tsx` — Per-panel overlay: current speed (m/s), height remaining (m), surface gravity label. Updates every frame from simulation state
+- [x] `src/components/FunFact.tsx` — Appears after both objects land. Random fact from planet's array. Framer Motion `AnimatePresence` fade-in
+- [x] Responsive layout in `ComparisonView.tsx`:
   - Desktop (1024px+): `flex-row`, each side 50%
   - Mobile (<768px): `flex-col`, stacked
-- [ ] Reset flow: "Try Again" button returns to idle state
-- [ ] Polish `layout.tsx` / `page.tsx`: proper spacing, remove any leftover boilerplate
+- [x] Reset flow: "Try Again" button returns to idle state
+- [x] Polish `layout.tsx` / `page.tsx`: proper spacing, remove any leftover boilerplate
 
 ### Deliverable
 PR with full end-to-end user flow. Select Mars + Europa, pick watermelon, DROP IT, watch boxes fall at different rates with live HUD, see fun fact. Reset and try again. Works on desktop and mobile viewports.
