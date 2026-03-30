@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   calculatePosition,
@@ -19,6 +19,13 @@ interface SimResult {
   landed: boolean;
 }
 
+const defaultResult: SimResult = {
+  position: DROP_HEIGHT,
+  velocity: 0,
+  impactVelocity: 0,
+  landed: false,
+};
+
 export function useGravitySim(
   gravity: number,
   phase: DropPhase,
@@ -27,28 +34,20 @@ export function useGravitySim(
   const elapsed = useRef(0);
   const timeScale = useRef(calculateTimeScale());
   const hasLanded = useRef(false);
-  const [result, setResult] = useState<SimResult>({
-    position: DROP_HEIGHT,
-    velocity: 0,
-    impactVelocity: 0,
-    landed: false,
-  });
+  const hasCalledOnLand = useRef(false);
+  const [result, setResult] = useState<SimResult>({ ...defaultResult });
+
+  // Reset all state when phase goes to idle
+  useEffect(() => {
+    if (phase === "idle") {
+      elapsed.current = 0;
+      hasLanded.current = false;
+      hasCalledOnLand.current = false;
+      setResult({ ...defaultResult });
+    }
+  }, [phase]);
 
   useFrame((_, delta) => {
-    if (phase === "idle") {
-      if (elapsed.current !== 0) {
-        elapsed.current = 0;
-        hasLanded.current = false;
-        setResult({
-          position: DROP_HEIGHT,
-          velocity: 0,
-          impactVelocity: 0,
-          landed: false,
-        });
-      }
-      return;
-    }
-
     if (phase !== "dropping" || hasLanded.current) return;
 
     // Scale delta by the time scale so physics runs at the right speed
@@ -68,7 +67,10 @@ export function useGravitySim(
         impactVelocity: impactVel,
         landed: true,
       });
-      onLand?.();
+      if (!hasCalledOnLand.current) {
+        hasCalledOnLand.current = true;
+        onLand?.();
+      }
     } else {
       setResult({
         position: pos,

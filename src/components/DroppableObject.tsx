@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
@@ -50,6 +50,16 @@ export function DroppableObject({
   // Push sim data to the store for HUD consumption
   const setter = side === "left" ? simStore.setLeft : simStore.setRight;
   setter(sim);
+
+  // Reset all animation state when phase goes to idle
+  useEffect(() => {
+    if (phase === "idle") {
+      wasLanded.current = false;
+      anticipationProgress.current = 0;
+      squashSpring.current = { scaleY: 1, velY: 0 };
+      wobbleTimer.current = 0;
+    }
+  }, [phase]);
 
   useFrame((_, delta) => {
     const mesh = meshRef.current;
@@ -108,11 +118,7 @@ export function DroppableObject({
       // Object sits on the ground
       yPos = scale * 0.5 * sy;
     } else {
-      // idle — reset everything
-      wasLanded.current = false;
-      anticipationProgress.current = 0;
-      squashSpring.current = { scaleY: 1, velY: 0 };
-      wobbleTimer.current = 0;
+      // idle or other non-active states — keep defaults
     }
 
     mesh.position.y = yPos;
