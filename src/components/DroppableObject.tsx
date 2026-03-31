@@ -8,6 +8,7 @@ import { useGravitySim } from "@/hooks/useGravitySim";
 import { simStore } from "@/hooks/useSimStore";
 import { springStep, wobble } from "@/lib/springPhysics";
 import { calculateSquash, getMaxVelocity } from "@/lib/physics";
+import { ImpactParticles } from "./ImpactParticles";
 import type { DropPhase } from "@/types";
 
 interface DroppableObjectProps {
@@ -18,6 +19,7 @@ interface DroppableObjectProps {
   scale: number;
   squashFactor: number;
   side: "left" | "right";
+  planetId: string;
   onLand?: () => void;
 }
 
@@ -177,6 +179,7 @@ export function DroppableObject({
   scale,
   squashFactor,
   side,
+  planetId,
   onLand,
 }: DroppableObjectProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -264,5 +267,16 @@ export function DroppableObject({
     );
   }
 
-  return <group ref={groupRef}>{objectMesh}</group>;
+  return (
+    <>
+      <group ref={groupRef}>{objectMesh}</group>
+      <ImpactParticles
+        planetId={planetId}
+        gravity={gravity}
+        impactVelocity={sim.impactVelocity}
+        phase={phase}
+        landed={sim.landed}
+      />
+    </>
+  );
 }

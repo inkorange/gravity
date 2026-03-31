@@ -10,6 +10,8 @@ interface PlanetSurfaceProps {
 }
 
 const PLANET_RADIUS = 80;
+const PLANE_SIZE = 80;
+const PLANE_SEGMENTS = 200;
 const TEX_SIZE = 1024;
 
 // Per-planet material properties
@@ -45,7 +47,6 @@ function smoothNoise(x: number, y: number): number {
   const iy = Math.floor(y);
   const fx = x - ix;
   const fy = y - iy;
-  // Quintic interpolation (smoother than cosine, avoids grid artifacts)
   const sx = fx * fx * fx * (fx * (fx * 6 - 15) + 10);
   const sy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
 
@@ -71,7 +72,6 @@ function fbm(x: number, y: number, octaves: number, lacunarity: number = 2.0, ga
   return value / maxAmp;
 }
 
-/** Ridge noise — abs of noise inverted for sharp ridgelines */
 function ridgeNoise(x: number, y: number, octaves: number): number {
   let value = 0;
   let amp = 1;
@@ -80,9 +80,9 @@ function ridgeNoise(x: number, y: number, octaves: number): number {
   let prev = 1;
   for (let i = 0; i < octaves; i++) {
     let n = Math.abs(smoothNoise(x * freq, y * freq) * 2 - 1);
-    n = 1 - n;          // invert — peaks become ridges
-    n = n * n;           // sharpen
-    n *= prev;           // successive ridges grow narrower
+    n = 1 - n;
+    n = n * n;
+    n *= prev;
     prev = n;
     value += n * amp;
     maxAmp += amp;
@@ -90,6 +90,39 @@ function ridgeNoise(x: number, y: number, octaves: number): number {
     freq *= 2.1;
   }
   return value / maxAmp;
+}
+
+// --- Curved plane geometry ---
+
+/**
+ * Creates a plane geometry whose vertices are displaced downward
+ * based on distance from center, following a sphere surface.
+ * This gives curved-horizon effect without UV pole pinching.
+ */
+function createCurvedPlaneGeometry(
+  size: number,
+  segments: number,
+  radius: number,
+): THREE.PlaneGeometry {
+  const geo = new THREE.PlaneGeometry(size, size, segments, segments);
+  geo.rotateX(-Math.PI / 2); // lay flat
+
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const distSq = x * x + z * z;
+    // Sphere surface approximation: y = R - sqrt(R² - d²)
+    // For large R this is ≈ d²/(2R), but using exact formula for accuracy
+    const y = distSq < radius * radius
+      ? radius - Math.sqrt(radius * radius - distSq)
+      : radius; // clamp at edge
+    pos.setY(i, -y);
+  }
+
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
 }
 
 // --- Texture generation ---
@@ -103,9 +136,9 @@ function generateTerrainTextures(
   const colorData = new Uint8Array(size * size * 4);
 
   const mat = PLANET_MATERIALS[planetId] ?? PLANET_MATERIALS.earth;
-  const colA = new THREE.Color(surfaceColor);             // primary
-  const colB = new THREE.Color(mat.secondaryColor!);      // secondary
-  const colC = new THREE.Color(mat.tertiaryColor!);       // tertiary (cracks, shadows, accents)
+  const colA = new THREE.Color(surfaceColor);
+  const colB = new THREE.Color(mat.secondaryColor!);
+  const colC = new THREE.Color(mat.tertiaryColor!);
   const tmp = new THREE.Color();
 
   const seed = planetId.charCodeAt(0) * 137 + (planetId.charCodeAt(1) ?? 0) * 31;
@@ -115,18 +148,16 @@ function generateTerrainTextures(
       const nx = px / size;
       const ny = py / size;
 
-      let bump: number;     // 0-255
-      let t1: number;       // blend primary↔secondary  (0‥1)
-      let t2: number = 0;   // blend toward tertiary      (0‥1)
+      let bump: number;
+      let t1: number;
+      let t2: number = 0;
 
       switch (planetId) {
-        // ─── Moon ─────────────────────────────────────
         case "moon": {
           const base = fbm(nx * 10 + seed, ny * 10, 6);
           const fine = fbm(nx * 40 + seed, ny * 40, 4, 2.2, 0.45);
           bump = base * 160 + fine * 50 + 40;
           t1 = base * 0.7 + fine * 0.3;
-          // Craters
           for (let c = 0; c < 28; c++) {
             const cx = hash(c + seed, 7) * size;
             const cy = hash(13, c + seed) * size;
@@ -145,14 +176,12 @@ function generateTerrainTextures(
           }
           break;
         }
-        // ─── Mars ─────────────────────────────────────
         case "mars": {
           const base = fbm(nx * 8 + seed, ny * 8, 6);
           const ridge = ridgeNoise(nx * 6 + seed, ny * 6, 5);
           const fine = fbm(nx * 30, ny * 30 + seed, 4, 2, 0.45);
           bump = base * 100 + ridge * 60 + fine * 40 + 50;
           t1 = base * 0.5 + ridge * 0.3 + fine * 0.2;
-          // Canyon channels
           const river = Math.abs(Math.sin(nx * 4 + fbm(nx * 3, ny * 2 + seed, 3) * 5));
           if (river < 0.05) {
             const depth = 1 - river / 0.05;
@@ -161,13 +190,11 @@ function generateTerrainTextures(
           }
           break;
         }
-        // ─── Europa ───────────────────────────────────
         case "europa": {
           const ice = fbm(nx * 5 + seed, ny * 5, 5, 2, 0.4);
           const fine = fbm(nx * 35, ny * 35 + seed, 4, 2, 0.5);
           bump = 190 + ice * 25 + fine * 15;
           t1 = ice * 0.3 + fine * 0.15 + 0.3;
-          // Major cracks
           const warp = fbm(nx * 4, ny * 4 + seed, 3);
           const c1 = Math.sin(nx * 18 + warp * 6) + Math.cos(ny * 14 - warp * 5);
           if (Math.abs(c1) < 0.15) {
@@ -175,7 +202,6 @@ function generateTerrainTextures(
             bump -= d * d * 110;
             t2 += d * 0.8;
           }
-          // Minor cracks
           const c2 = Math.sin(nx * 30 + ny * 10 + seed) + Math.cos(ny * 25 - nx * 15);
           if (Math.abs(c2) < 0.09) {
             const d = 1 - Math.abs(c2) / 0.09;
@@ -184,7 +210,6 @@ function generateTerrainTextures(
           }
           break;
         }
-        // ─── Sun ──────────────────────────────────────
         case "sun": {
           const t1n = fbm(nx * 6 + seed, ny * 6, 7, 2.2, 0.55);
           const t2n = fbm(nx * 12 + 50, ny * 12 + seed, 5, 2, 0.5);
@@ -195,7 +220,6 @@ function generateTerrainTextures(
           t2 = Math.max(0, -cell * 0.5) + fine * 0.2;
           break;
         }
-        // ─── Titan ────────────────────────────────────
         case "titan": {
           const base = fbm(nx * 4 + seed, ny * 4, 5, 2, 0.45);
           const dune = Math.sin(nx * 24 + base * 7) * 0.5 + 0.5;
@@ -205,7 +229,6 @@ function generateTerrainTextures(
           t2 = (1 - dune) * 0.3;
           break;
         }
-        // ─── Pluto ────────────────────────────────────
         case "pluto": {
           const base = fbm(nx * 6 + seed, ny * 6, 6);
           const plains = smoothNoise(nx * 2.5 + seed, ny * 2.5);
@@ -218,7 +241,6 @@ function generateTerrainTextures(
           t2 = isPlain ? 0 : base * 0.2;
           break;
         }
-        // ─── Jupiter ──────────────────────────────────
         case "jupiter": {
           const bandPos = ny * 12 + Math.sin(nx * 5 + seed) * 0.9;
           const band = Math.sin(bandPos) * 0.5 + 0.5;
@@ -229,7 +251,6 @@ function generateTerrainTextures(
           t2 = (1 - band) * turb * 0.4;
           break;
         }
-        // ─── Earth (default) ──────────────────────────
         default: {
           const terrain = fbm(nx * 8 + seed, ny * 8, 6);
           const detail = fbm(nx * 18, ny * 18 + seed, 5, 2, 0.45);
@@ -242,7 +263,6 @@ function generateTerrainTextures(
 
       bumpData[py * size + px] = Math.max(0, Math.min(255, Math.round(bump)));
 
-      // Three-way color blend: primary → secondary (t1), then toward tertiary (t2)
       const s1 = Math.max(0, Math.min(1, t1));
       const s2 = Math.max(0, Math.min(1, t2));
       tmp.copy(colA).lerp(colB, s1).lerp(colC, s2);
@@ -281,9 +301,13 @@ export function PlanetSurface({ surfaceColor, skyColor, planetId }: PlanetSurfac
     [planetId, surfaceColor],
   );
 
+  const geometry = useMemo(
+    () => createCurvedPlaneGeometry(PLANE_SIZE, PLANE_SEGMENTS, PLANET_RADIUS),
+    [],
+  );
+
   return (
-    <mesh position={[0, -PLANET_RADIUS, 0]} receiveShadow>
-      <sphereGeometry args={[PLANET_RADIUS, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+    <mesh geometry={geometry} receiveShadow>
       <meshStandardMaterial
         color={"#ffffff"}
         map={colorMap}

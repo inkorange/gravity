@@ -1,12 +1,10 @@
 "use client";
 
-import { useRef, useMemo } from "react";
-import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
 import { ContactShadows, Stars } from "@react-three/drei";
 import { PlanetSurface } from "./PlanetSurface";
 import { DroppableObject } from "./DroppableObject";
 import { AmbientParticles } from "./AmbientParticles";
+import { SkyDome } from "./SkyDome";
 import type { CelestialBody, DroppableObject as DroppableObjectType, DropPhase } from "@/types";
 
 // Planets with no atmosphere get a starfield
@@ -97,6 +95,8 @@ export function PlanetScene({ planet, object, phase, side, onLand }: PlanetScene
         <Stars radius={100} depth={50} count={3000} factor={3} saturation={0} fade speed={0.5} />
       )}
 
+      <SkyDome skyColor={planet.skyColor} planetId={planet.id} />
+
       <PlanetSurface
         surfaceColor={planet.surfaceColor}
         skyColor={planet.skyColor}
@@ -122,6 +122,7 @@ export function PlanetScene({ planet, object, phase, side, onLand }: PlanetScene
         scale={object.scale}
         squashFactor={object.squashFactor}
         side={side}
+        planetId={planet.id}
         onLand={onLand}
       />
 
