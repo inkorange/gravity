@@ -108,17 +108,18 @@ PR with full end-to-end user flow. Select Mars + Europa, pick watermelon, DROP I
 **Goal**: Replace all placeholder geometry with real GLTF models, PBR planet surfaces, HDR environment maps, and post-processing. The visual quality leap.
 
 ### Track A: Asset Acquisition & Processing
-- [ ] Source GLTF models for all 6 objects (Sketchfab CC-licensed or generated). Process with `gltf-transform`: normalize scale, Draco compress, verify PBR channels. Place in `public/models/`
-- [ ] Download NASA/JPL planet surface textures (public domain). Generate normal maps. Place in `public/textures/planets/{planet-id}/` with albedo, normal, roughness maps
-- [ ] Source HDR star field from Poly Haven (CC0). Color-grade per planet. Place in `public/textures/hdri/`
+- [ ] Source GLTF models for all 6 objects (Sketchfab CC-licensed or generated). Process with `gltf-transform`: normalize scale, Draco compress, verify PBR channels. Place in `public/models/` *(deferred — using procedural geometry with PBR materials for now)*
+- [ ] Download NASA/JPL planet surface textures (public domain). Generate normal maps. Place in `public/textures/planets/{planet-id}/` with albedo, normal, roughness maps *(deferred — using procedural bump maps for now)*
+- [ ] Source HDR star field from Poly Haven (CC0). Color-grade per planet. Place in `public/textures/hdri/` *(replaced with drei Stars component for airless bodies)*
 - [ ] Copy Draco WASM decoder files to `public/draco/`
 - [ ] Create `src/lib/assets.ts` — manifest mapping planet IDs → texture paths, object IDs → model paths
 
 ### Track B: Rendering Upgrade
-- [ ] `DroppableObject.tsx`: replace box with `useGLTF` + Draco loader + `<Suspense>` fallback
-- [ ] `PlanetSurface.tsx`: PBR terrain mesh with `useTexture` (albedo, normal, roughness, displacement)
-- [ ] Per-planet lighting: IBL via drei `<Environment>`, directional light color temp, `<ContactShadows>`
-- [ ] `src/components/PostProcessing.tsx`: `<EffectComposer>` with SSAO, bloom, tone mapping
+- [x] `DroppableObject.tsx`: per-object procedural geometry with PBR materials (sphere for bowling ball, capsule+sphere for elephant, box+cylinders for school bus, etc.) with meshPhysicalMaterial clearcoat on glossy objects
+- [x] `PlanetSurface.tsx`: procedural bump-mapped terrain with per-planet material properties (roughness, metalness, emissive for Sun). Moon craters, Mars ridges, Europa ice cracks
+- [x] Per-planet lighting: tinted ambient + directional with color temperature, rim light for visual pop, `<ContactShadows>` for grounding
+- [x] Starfield via drei `<Stars>` for airless bodies (Moon, Europa, Pluto)
+- [x] `src/components/PostProcessing.tsx`: `<EffectComposer>` with bloom (stronger on Sun) and vignette
 - [ ] Quality toggle component (High/Med/Low) stored in `localStorage`. High = full effects, Low = no post-processing + smaller textures
 - [ ] `src/components/LoadingScreen.tsx` — drei `useProgress` with branded loading bar
 
