@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { View } from "@react-three/drei";
 import { PlanetScene } from "./PlanetScene";
@@ -35,29 +35,27 @@ export function ComparisonView() {
 
   // Track landings — call land() when both sides have landed
   const landedCount = useRef(0);
-  const hasShaken = useRef(false);
 
-  // Trigger screen shake when landing
-  useEffect(() => {
-    if (phase === "landed" && !hasShaken.current) {
-      const maxGravity = Math.max(leftPlanet.gravity, rightPlanet.gravity);
-      const maxVel = getMaxVelocity(maxGravity);
-      const intensity = Math.min(maxVel / getMaxVelocity(274), 1);
-      triggerShake(intensity);
-      hasShaken.current = true;
-    }
-    if (phase === "idle") {
-      hasShaken.current = false;
-    }
-  }, [phase, leftPlanet.gravity, rightPlanet.gravity, triggerShake]);
+  const handleLandWithShake = useCallback((gravity: number) => {
+    // Shake on each individual impact, scaled by that planet's gravity
+    const maxVel = getMaxVelocity(gravity);
+    const intensity = Math.min(maxVel / getMaxVelocity(274), 1);
+    triggerShake(intensity);
 
-  const handleLand = useCallback(() => {
     landedCount.current += 1;
     if (landedCount.current >= 2) {
       land();
       landedCount.current = 0;
     }
-  }, [land]);
+  }, [land, triggerShake]);
+
+  const handleLeftLand = useCallback(() => {
+    handleLandWithShake(leftPlanet.gravity);
+  }, [handleLandWithShake, leftPlanet.gravity]);
+
+  const handleRightLand = useCallback(() => {
+    handleLandWithShake(rightPlanet.gravity);
+  }, [handleLandWithShake, rightPlanet.gravity]);
 
   // Reset landing counter when phase changes to idle
   if (phase === "idle") {
@@ -114,7 +112,7 @@ export function ComparisonView() {
                 object={selectedObject}
                 phase={phase}
                 side="left"
-                onLand={handleLand}
+                onLand={handleLeftLand}
               />
             </View>
             <View track={rightRef}>
@@ -123,7 +121,7 @@ export function ComparisonView() {
                 object={selectedObject}
                 phase={phase}
                 side="right"
-                onLand={handleLand}
+                onLand={handleRightLand}
               />
             </View>
           </Canvas>
