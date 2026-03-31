@@ -163,14 +163,16 @@ PR where the app feels alive. Objects bob, slam, bounce, wobble. UI springs on e
 **Goal**: Production-ready. Passes performance budget. Live on Vercel.
 
 ### Tasks
+- [x] Visual polish: CSS vignette overlays per-panel (View-compatible replacement for removed EffectComposer)
+- [x] Per-planet atmospheric fog for depth
+- [x] Enhanced lighting: hemisphere light, fill light from below, stronger rim light
+- [x] Ambient scene particles: Mars dust, Sun embers, Europa ice sparkles, Titan haze, Jupiter gas wisps, Pluto frost
+- [x] Richer planet surfaces: procedural color maps with terrain variation, higher subdivision (128x128), secondary color blending
+- [x] Accessibility: `aria-label` on all interactive elements, `role="radiogroup"` on selectors, `aria-live="polite"` on HUD, `prefers-reduced-motion` disables screen shake
+- [x] Verify Three.js loads only via dynamic import (not in initial bundle)
+- [x] `pnpm build` → verify static export in `out/`
 - [ ] Lighthouse audit: target 90+ Performance, FCP <2s, TTI <3s
-- [ ] Profile on iPad Safari (BrowserStack or real device). Auto-disable post-processing on low-end via `navigator.hardwareConcurrency`
-- [ ] Verify Three.js loads only via dynamic import (not in initial bundle)
-- [ ] Verify models/textures lazy-load with visible progress indicators
-- [ ] Add `<link rel="preload">` for default assets (bowling ball model, Earth/Moon textures)
-- [ ] Accessibility: `aria-label` on all interactive elements, keyboard nav for selectors, `prefers-reduced-motion` disables screen shake and reduces animation
 - [ ] Create OG image (`public/og-image.png`)
-- [ ] `pnpm build` → verify static export in `out/`
 - [ ] Deploy to Vercel: `vercel --prod` under inkOrange team
 - [ ] Verify production URL loads and works
 

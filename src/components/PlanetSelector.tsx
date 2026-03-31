@@ -9,15 +9,18 @@ interface PlanetSelectorProps {
   side: "left" | "right";
 }
 
-export function PlanetSelector({ selectedId, onSelect }: PlanetSelectorProps) {
+export function PlanetSelector({ selectedId, onSelect, side }: PlanetSelectorProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto px-3 py-2 scrollbar-hide">
+    <div className="flex gap-2 overflow-x-auto px-3 py-2 scrollbar-hide" role="radiogroup" aria-label={`${side} planet selector`}>
       {planets.map((planet) => {
         const isSelected = planet.id === selectedId;
         return (
           <motion.button
             key={planet.id}
             onClick={() => onSelect(planet.id)}
+            role="radio"
+            aria-checked={isSelected}
+            aria-label={`${planet.name}, gravity ${planet.relativeGravity}g`}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
             animate={
