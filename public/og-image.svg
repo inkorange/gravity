@@ -1,0 +1,101 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#141428"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </radialGradient>
+    <radialGradient id="earth" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#5bbfff"/>
+      <stop offset="50%" stop-color="#2d6ec7"/>
+      <stop offset="100%" stop-color="#1a3a6e"/>
+    </radialGradient>
+    <radialGradient id="mars" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#ff8855"/>
+      <stop offset="50%" stop-color="#c05530"/>
+      <stop offset="100%" stop-color="#6e2a15"/>
+    </radialGradient>
+    <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4da6ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#4da6ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e07040" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#e07040" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Stars -->
+  <circle cx="100" cy="80" r="1.5" fill="white" opacity="0.6"/>
+  <circle cx="250" cy="150" r="1" fill="white" opacity="0.4"/>
+  <circle cx="400" cy="60" r="1.5" fill="white" opacity="0.5"/>
+  <circle cx="550" cy="120" r="1" fill="white" opacity="0.3"/>
+  <circle cx="700" cy="50" r="2" fill="white" opacity="0.6"/>
+  <circle cx="850" cy="100" r="1" fill="white" opacity="0.4"/>
+  <circle cx="1000" cy="70" r="1.5" fill="white" opacity="0.5"/>
+  <circle cx="1100" cy="130" r="1" fill="white" opacity="0.3"/>
+  <circle cx="150" cy="500" r="1" fill="white" opacity="0.4"/>
+  <circle cx="350" cy="550" r="1.5" fill="white" opacity="0.3"/>
+  <circle cx="900" cy="520" r="1" fill="white" opacity="0.5"/>
+  <circle cx="1050" cy="480" r="1.5" fill="white" opacity="0.4"/>
+  <circle cx="50" cy="300" r="1" fill="white" opacity="0.3"/>
+  <circle cx="1150" cy="350" r="1.5" fill="white" opacity="0.5"/>
+
+  <!-- Earth glow -->
+  <circle cx="350" cy="380" r="160" fill="url(#glow1)"/>
+  <!-- Earth -->
+  <circle cx="350" cy="380" r="90" fill="url(#earth)"/>
+  <!-- Earth surface hint -->
+  <path d="M290 360 Q320 340 350 355 Q380 370 400 350 Q410 345 410 360" fill="#2a8a2a" opacity="0.4"/>
+  <path d="M310 400 Q340 390 360 405 Q380 410 390 395" fill="#2a8a2a" opacity="0.3"/>
+
+  <!-- Mars glow -->
+  <circle cx="850" cy="380" r="130" fill="url(#glow2)"/>
+  <!-- Mars -->
+  <circle cx="850" cy="380" r="70" fill="url(#mars)"/>
+
+  <!-- Falling objects (bowling balls) -->
+  <!-- Left ball - lower (faster gravity) -->
+  <circle cx="350" cy="260" r="14" fill="#1a1a3a"/>
+  <circle cx="347" cy="257" r="3" fill="#2a2a5a" opacity="0.6"/>
+  <!-- Motion lines -->
+  <line x1="350" y1="220" x2="350" y2="240" stroke="white" stroke-width="1.5" opacity="0.3"/>
+  <line x1="343" y1="222" x2="343" y2="238" stroke="white" stroke-width="1" opacity="0.2"/>
+  <line x1="357" y1="224" x2="357" y2="236" stroke="white" stroke-width="1" opacity="0.2"/>
+
+  <!-- Right ball - higher (less gravity) -->
+  <circle cx="850" cy="210" r="14" fill="#1a1a3a"/>
+  <circle cx="847" cy="207" r="3" fill="#2a2a5a" opacity="0.6"/>
+  <!-- Motion lines -->
+  <line x1="850" y1="170" x2="850" y2="190" stroke="white" stroke-width="1.5" opacity="0.3"/>
+  <line x1="843" y1="172" x2="843" y2="188" stroke="white" stroke-width="1" opacity="0.2"/>
+  <line x1="857" y1="174" x2="857" y2="186" stroke="white" stroke-width="1" opacity="0.2"/>
+
+  <!-- Divider -->
+  <line x1="600" y1="180" x2="600" y2="500" stroke="white" stroke-width="1" opacity="0.1"/>
+
+  <!-- Title -->
+  <text x="600" y="110" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="white">
+    Gravity Playground
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="155" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#a0a0b0">
+    What happens when you drop things on other planets?
+  </text>
+
+  <!-- Planet labels -->
+  <text x="350" y="510" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#4da6ff">
+    🌍 Earth (1g)
+  </text>
+  <text x="850" y="510" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#e07040">
+    🔴 Mars (0.38g)
+  </text>
+
+  <!-- Bottom tagline -->
+  <text x="600" y="585" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#666680">
+    An interactive 3D space experiment for kids
+  </text>
+</svg>

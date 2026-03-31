@@ -9,13 +9,14 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://gravity.inkorange.com"),
   title: "Gravity Playground - How Does Gravity Work on Other Planets?",
   description:
     "Drop objects on different planets and see how gravity changes. An interactive 3D space experiment for kids.",
   openGraph: {
     title: "Gravity Playground",
     description: "What happens when you drop an elephant on Jupiter?",
-    images: ["/og-image.png"],
+    images: ["/og-image.svg"],
   },
 };
 
