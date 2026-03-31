@@ -9,13 +9,16 @@ export function ObjectPicker() {
   const disabled = phase === "dropping";
 
   return (
-    <div className="flex gap-2 justify-center px-3 py-2">
+    <div className="flex gap-2 justify-center px-3 py-2" role="radiogroup" aria-label="Object selector">
       {objects.map((obj) => {
         const isSelected = obj.id === objectId;
         return (
           <motion.button
             key={obj.id}
             onClick={() => !disabled && setObject(obj.id)}
+            role="radio"
+            aria-checked={isSelected}
+            aria-label={`${obj.name}, ${obj.mass >= 1000 ? `${(obj.mass / 1000).toFixed(0)} tons` : `${obj.mass} kg`}`}
             whileHover={disabled ? {} : { scale: 1.1, rotate: [-2, 2, 0] }}
             whileTap={disabled ? {} : { scale: 0.92 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}

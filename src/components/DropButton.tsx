@@ -15,6 +15,7 @@ export function DropButton() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        aria-label="Reset and try again"
         className="px-8 py-3 text-xl font-bold rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer"
       >
         Try Again!
@@ -40,6 +41,7 @@ export function DropButton() {
       }
       whileHover={isDropping ? {} : { scale: 1.08 }}
       whileTap={isDropping ? {} : { scale: 0.88, y: 4 }}
+      aria-label={isDropping ? "Object is dropping" : "Drop the object"}
       className="px-8 py-3 text-xl font-bold rounded-full bg-gradient-to-b from-red-500 to-red-700 text-white shadow-lg shadow-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     >
       {isDropping ? "Dropping..." : "DROP IT!"}

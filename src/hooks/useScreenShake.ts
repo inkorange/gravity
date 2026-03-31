@@ -48,6 +48,8 @@ export function useScreenShake() {
   const trigger = useCallback(
     (intensity: number) => {
       if (intensity < 0.05) return; // Skip shake for very low gravity impacts
+      // Respect prefers-reduced-motion
+      if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       shakeState.current = {
         active: true,
         startTime: performance.now(),

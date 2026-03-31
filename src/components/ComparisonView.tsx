@@ -70,6 +70,13 @@ export function ComparisonView() {
         <div ref={leftRef} className="relative flex-1 min-h-0 overflow-hidden">
           <HUD side="left" planet={leftPlanet} />
           <FunFact planet={leftPlanet} phase={phase} />
+          {/* Vignette overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[1]"
+            style={{
+              background: `radial-gradient(ellipse at center, transparent 50%, ${leftPlanet.skyColor}90 100%)`,
+            }}
+          />
           <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none z-10">
             <span
               className="text-base font-bold px-3 py-1 rounded-full"
@@ -88,6 +95,13 @@ export function ComparisonView() {
         <div ref={rightRef} className="relative flex-1 min-h-0 overflow-hidden">
           <HUD side="right" planet={rightPlanet} />
           <FunFact planet={rightPlanet} phase={phase} />
+          {/* Vignette overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[1]"
+            style={{
+              background: `radial-gradient(ellipse at center, transparent 50%, ${rightPlanet.skyColor}90 100%)`,
+            }}
+          />
           <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none z-10">
             <span
               className="text-base font-bold px-3 py-1 rounded-full"
