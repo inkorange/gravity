@@ -26,4 +26,8 @@ body {
   color: var(--text-primary);
   font-family: var(--font-nunito), Arial, Helvetica, sans-serif;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

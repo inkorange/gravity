@@ -20,6 +20,7 @@ export interface DroppableObject {
   scale: number;
   fallbackColor: string;
   squashFactor: number;
+  restitution: number; // bounce coefficient (0 = no bounce, 1 = perfect bounce)
 }
 
 export type DropPhase = "idle" | "ready" | "anticipation" | "dropping" | "bouncing" | "landed";

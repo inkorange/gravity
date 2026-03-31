@@ -171,8 +171,8 @@ PR where the app feels alive. Objects bob, slam, bounce, wobble. UI springs on e
 - [x] Accessibility: `aria-label` on all interactive elements, `role="radiogroup"` on selectors, `aria-live="polite"` on HUD, `prefers-reduced-motion` disables screen shake
 - [x] Verify Three.js loads only via dynamic import (not in initial bundle)
 - [x] `pnpm build` → verify static export in `out/`
+- [x] Create OG image (`public/og-image.svg`) and fix metadataBase
 - [ ] Lighthouse audit: target 90+ Performance, FCP <2s, TTI <3s
-- [ ] Create OG image (`public/og-image.png`)
 - [ ] Deploy to Vercel: `vercel --prod` under inkOrange team
 - [ ] Verify production URL loads and works
 

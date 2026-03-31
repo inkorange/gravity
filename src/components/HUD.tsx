@@ -12,8 +12,8 @@ export function HUD({ side, planet }: HUDProps) {
   const sim = useSimData(side);
 
   return (
-    <div className="absolute top-3 left-3 right-3 z-10 pointer-events-none" role="status" aria-live="polite" aria-label={`${side} panel telemetry`}>
-      <div className="flex flex-col gap-1 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 text-sm font-mono">
+    <div className="absolute top-1.5 left-1.5 right-1.5 md:top-3 md:left-3 md:right-3 z-10 pointer-events-none" role="status" aria-live="polite" aria-label={`${side} panel telemetry`}>
+      <div className="flex flex-col gap-0.5 md:gap-1 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 md:px-3 md:py-2 text-[10px] md:text-sm font-mono">
         <div className="flex justify-between">
           <span className="text-white/50">Speed</span>
           <span className="text-white font-bold">
