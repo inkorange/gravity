@@ -66,44 +66,44 @@ export function ComparisonView() {
         ref={canvasContainerRef}
         className="relative flex flex-1 flex-col md:flex-row min-h-0"
       >
-        {/* Left panel tracking div */}
-        <div ref={leftRef} className="relative flex-1 min-h-0 overflow-hidden">
-          <HUD side="left" planet={leftPlanet} />
-          <FunFact planet={leftPlanet} phase={phase} />
-          <div
-            className="absolute inset-0 pointer-events-none z-[1]"
-            style={{
-              background: `radial-gradient(ellipse at center, transparent 50%, ${leftPlanet.skyColor}90 100%)`,
-            }}
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="hidden md:block w-px bg-white/10 z-10" />
-        <div className="block md:hidden h-px bg-white/10 z-10" />
-
-        {/* Right panel tracking div */}
-        <div ref={rightRef} className="relative flex-1 min-h-0 overflow-hidden">
-          <HUD side="right" planet={rightPlanet} />
-          <FunFact planet={rightPlanet} phase={phase} />
-          <div
-            className="absolute inset-0 pointer-events-none z-[1]"
-            style={{
-              background: `radial-gradient(ellipse at center, transparent 50%, ${rightPlanet.skyColor}90 100%)`,
-            }}
-          />
-        </div>
-
-        {/* Planet selectors — outside overflow-hidden panels */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col md:flex-row pointer-events-none">
-          <div className="flex-1 pointer-events-auto">
+        {/* Left panel wrapper — contains tracking div + selector */}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div ref={leftRef} className="relative flex-1 min-h-0 overflow-hidden">
+            <HUD side="left" planet={leftPlanet} />
+            <FunFact planet={leftPlanet} phase={phase} />
+            <div
+              className="absolute inset-0 pointer-events-none z-[1]"
+              style={{
+                background: `radial-gradient(ellipse at center, transparent 50%, ${leftPlanet.skyColor}90 100%)`,
+              }}
+            />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 z-20">
             <PlanetSelector
               selectedId={leftPlanetId}
               onSelect={setLeftPlanet}
               side="left"
             />
           </div>
-          <div className="flex-1 pointer-events-auto">
+        </div>
+
+        {/* Divider */}
+        <div className="hidden md:block w-px bg-white/10 z-10" />
+        <div className="block md:hidden h-px bg-white/10 z-10" />
+
+        {/* Right panel wrapper — contains tracking div + selector */}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div ref={rightRef} className="relative flex-1 min-h-0 overflow-hidden">
+            <HUD side="right" planet={rightPlanet} />
+            <FunFact planet={rightPlanet} phase={phase} />
+            <div
+              className="absolute inset-0 pointer-events-none z-[1]"
+              style={{
+                background: `radial-gradient(ellipse at center, transparent 50%, ${rightPlanet.skyColor}90 100%)`,
+              }}
+            />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 z-20">
             <PlanetSelector
               selectedId={rightPlanetId}
               onSelect={setRightPlanet}
