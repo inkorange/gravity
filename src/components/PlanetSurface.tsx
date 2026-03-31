@@ -14,27 +14,51 @@ const PLANE_SIZE = 80;
 const PLANE_SEGMENTS = 200;
 const TEX_SIZE = 1024;
 
-// Per-planet material properties
-const PLANET_MATERIALS: Record<string, {
+// Per-planet material + color palette (4-5 colors each for rich variation)
+const PLANET_PALETTES: Record<string, {
   roughness: number;
   metalness: number;
   bumpScale: number;
   emissiveColor?: string;
   emissiveIntensity?: number;
-  secondaryColor?: string;
-  tertiaryColor?: string;
+  colors: string[]; // [base, secondary, tertiary, accent, speckle]
 }> = {
-  earth:   { roughness: 0.85, metalness: 0.05, bumpScale: 0.5, secondaryColor: "#4a9a3a", tertiaryColor: "#8b6d3f" },
-  moon:    { roughness: 0.95, metalness: 0.0,  bumpScale: 1.2, secondaryColor: "#9a9a9a", tertiaryColor: "#505050" },
-  mars:    { roughness: 0.9,  metalness: 0.02, bumpScale: 0.9, secondaryColor: "#d4713a", tertiaryColor: "#7a2800" },
-  jupiter: { roughness: 0.7,  metalness: 0.1,  bumpScale: 0.2, secondaryColor: "#d4a050", tertiaryColor: "#8a5020" },
-  sun:     { roughness: 0.3,  metalness: 0.2,  bumpScale: 0.6, emissiveColor: "#ff4400", emissiveIntensity: 0.6, secondaryColor: "#ffaa22", tertiaryColor: "#cc2200" },
-  pluto:   { roughness: 0.8,  metalness: 0.05, bumpScale: 0.7, secondaryColor: "#e0d4c0", tertiaryColor: "#907858" },
-  europa:  { roughness: 0.4,  metalness: 0.15, bumpScale: 0.5, secondaryColor: "#d0e8f0", tertiaryColor: "#607080" },
-  titan:   { roughness: 0.85, metalness: 0.0,  bumpScale: 0.6, secondaryColor: "#c09030", tertiaryColor: "#604818" },
+  earth: {
+    roughness: 0.85, metalness: 0.05, bumpScale: 0.5,
+    colors: ["#2d6e2d", "#4a9a3a", "#8b6d3f", "#5c8a2a", "#3a5520"],
+  },
+  moon: {
+    roughness: 0.95, metalness: 0.0, bumpScale: 1.2,
+    colors: ["#8a8a8a", "#a0a0a0", "#606060", "#b0a898", "#484848"],
+  },
+  mars: {
+    roughness: 0.9, metalness: 0.02, bumpScale: 0.9,
+    colors: ["#c1440e", "#d4713a", "#7a2800", "#e8a070", "#5c1800"],
+  },
+  jupiter: {
+    roughness: 0.7, metalness: 0.1, bumpScale: 0.2,
+    colors: ["#c49a6c", "#d4a050", "#8a5020", "#e8c890", "#6a4018"],
+  },
+  sun: {
+    roughness: 0.3, metalness: 0.2, bumpScale: 0.6,
+    emissiveColor: "#ff4400", emissiveIntensity: 0.6,
+    colors: ["#ff6600", "#ffaa22", "#cc2200", "#ffdd44", "#881100"],
+  },
+  pluto: {
+    roughness: 0.8, metalness: 0.05, bumpScale: 0.7,
+    colors: ["#d4c5a9", "#e0d4c0", "#907858", "#c8b898", "#786040"],
+  },
+  europa: {
+    roughness: 0.4, metalness: 0.15, bumpScale: 0.5,
+    colors: ["#b8d4d4", "#d0e8f0", "#607080", "#8ab0c8", "#405060"],
+  },
+  titan: {
+    roughness: 0.85, metalness: 0.0, bumpScale: 0.6,
+    colors: ["#a07830", "#c09030", "#604818", "#d4a848", "#483010"],
+  },
 };
 
-// --- Noise functions ---
+// ─── Noise primitives ───────────────────────────────────────
 
 function hash(x: number, y: number): number {
   let h = (x * 374761393 + y * 668265263) | 0;
@@ -49,96 +73,88 @@ function smoothNoise(x: number, y: number): number {
   const fy = y - iy;
   const sx = fx * fx * fx * (fx * (fx * 6 - 15) + 10);
   const sy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
-
   const n00 = hash(ix, iy);
   const n10 = hash(ix + 1, iy);
   const n01 = hash(ix, iy + 1);
   const n11 = hash(ix + 1, iy + 1);
-
   return n00 + (n10 - n00) * sx + (n01 - n00) * sy + (n00 - n10 - n01 + n11) * sx * sy;
 }
 
-function fbm(x: number, y: number, octaves: number, lacunarity: number = 2.0, gain: number = 0.5): number {
-  let value = 0;
-  let amp = 1;
-  let freq = 1;
-  let maxAmp = 0;
+function fbm(x: number, y: number, octaves: number, lac: number = 2.0, gain: number = 0.5): number {
+  let v = 0, a = 1, f = 1, m = 0;
   for (let i = 0; i < octaves; i++) {
-    value += smoothNoise(x * freq, y * freq) * amp;
-    maxAmp += amp;
-    amp *= gain;
-    freq *= lacunarity;
+    v += smoothNoise(x * f, y * f) * a;
+    m += a; a *= gain; f *= lac;
   }
-  return value / maxAmp;
+  return v / m;
 }
 
-function ridgeNoise(x: number, y: number, octaves: number): number {
-  let value = 0;
-  let amp = 1;
-  let freq = 1;
-  let maxAmp = 0;
-  let prev = 1;
+function ridgeFbm(x: number, y: number, octaves: number): number {
+  let v = 0, a = 1, f = 1, m = 0, prev = 1;
   for (let i = 0; i < octaves; i++) {
-    let n = Math.abs(smoothNoise(x * freq, y * freq) * 2 - 1);
-    n = 1 - n;
-    n = n * n;
-    n *= prev;
-    prev = n;
-    value += n * amp;
-    maxAmp += amp;
-    amp *= 0.5;
-    freq *= 2.1;
+    let n = Math.abs(smoothNoise(x * f, y * f) * 2 - 1);
+    n = (1 - n); n *= n; n *= prev; prev = n;
+    v += n * a; m += a; a *= 0.5; f *= 2.1;
   }
-  return value / maxAmp;
+  return v / m;
 }
 
-// --- Curved plane geometry ---
+/** Domain warping — uses noise to distort input coordinates for organic patterns */
+function warpedFbm(x: number, y: number, octaves: number, warpStrength: number = 1.5, seed: number = 0): number {
+  const qx = fbm(x + seed, y, 4);
+  const qy = fbm(x, y + seed + 5.2, 4);
+  const rx = fbm(x + qx * warpStrength + 1.7, y + qy * warpStrength + 9.2, 4);
+  const ry = fbm(x + qx * warpStrength + 8.3, y + qy * warpStrength + 2.8, 4);
+  return fbm(x + rx * warpStrength, y + ry * warpStrength, octaves);
+}
 
-/**
- * Creates a plane geometry whose vertices are displaced downward
- * based on distance from center, following a sphere surface.
- * This gives curved-horizon effect without UV pole pinching.
- */
-function createCurvedPlaneGeometry(
-  size: number,
-  segments: number,
-  radius: number,
-): THREE.PlaneGeometry {
+/** Hash-based speckle — random grain at pixel level */
+function speckle(x: number, y: number, intensity: number): number {
+  return (hash(x * 1000 + 0.5, y * 1000 + 0.5) - 0.5) * intensity;
+}
+
+// ─── Curved plane geometry ──────────────────────────────────
+
+function createCurvedPlaneGeometry(size: number, segments: number, radius: number): THREE.PlaneGeometry {
   const geo = new THREE.PlaneGeometry(size, size, segments, segments);
-  geo.rotateX(-Math.PI / 2); // lay flat
-
+  geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
     const distSq = x * x + z * z;
-    // Sphere surface approximation: y = R - sqrt(R² - d²)
-    // For large R this is ≈ d²/(2R), but using exact formula for accuracy
     const y = distSq < radius * radius
       ? radius - Math.sqrt(radius * radius - distSq)
-      : radius; // clamp at edge
+      : radius;
     pos.setY(i, -y);
   }
-
   pos.needsUpdate = true;
   geo.computeVertexNormals();
   return geo;
 }
 
-// --- Texture generation ---
+// ─── Texture generation ─────────────────────────────────────
+
+function blendPalette(colors: THREE.Color[], t: number, out: THREE.Color): THREE.Color {
+  const n = colors.length - 1;
+  const idx = Math.max(0, Math.min(n, t * n));
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, n);
+  const frac = idx - lo;
+  return out.copy(colors[lo]).lerp(colors[hi], frac);
+}
 
 function generateTerrainTextures(
   planetId: string,
   surfaceColor: string,
   size: number = TEX_SIZE,
-): { bumpMap: THREE.DataTexture; colorMap: THREE.DataTexture } {
+): { colorMap: THREE.DataTexture; roughnessMap: THREE.DataTexture; normalMap: THREE.DataTexture } {
   const bumpData = new Uint8Array(size * size);
   const colorData = new Uint8Array(size * size * 4);
+  const roughData = new Uint8Array(size * size);
 
-  const mat = PLANET_MATERIALS[planetId] ?? PLANET_MATERIALS.earth;
-  const colA = new THREE.Color(surfaceColor);
-  const colB = new THREE.Color(mat.secondaryColor!);
-  const colC = new THREE.Color(mat.tertiaryColor!);
+  const pal = PLANET_PALETTES[planetId] ?? PLANET_PALETTES.earth;
+  const palette = pal.colors.map(c => new THREE.Color(c));
   const tmp = new THREE.Color();
 
   const seed = planetId.charCodeAt(0) * 137 + (planetId.charCodeAt(1) ?? 0) * 31;
@@ -149,139 +165,168 @@ function generateTerrainTextures(
       const ny = py / size;
 
       let bump: number;
-      let t1: number;
-      let t2: number = 0;
+      let colorT: number;     // 0‥1 index into palette
+      let roughVar: number;   // roughness variation (-0.2 to 0.2)
+      const grain = speckle(nx, ny, 0.08);
 
       switch (planetId) {
         case "moon": {
-          const base = fbm(nx * 10 + seed, ny * 10, 6);
-          const fine = fbm(nx * 40 + seed, ny * 40, 4, 2.2, 0.45);
-          bump = base * 160 + fine * 50 + 40;
-          t1 = base * 0.7 + fine * 0.3;
-          for (let c = 0; c < 28; c++) {
+          const warped = warpedFbm(nx * 8, ny * 8, 6, 1.2, seed);
+          const fine = fbm(nx * 35 + seed, ny * 35, 4, 2.2, 0.45);
+          const detail = fbm(nx * 60, ny * 60 + seed, 3, 2, 0.4);
+          bump = warped * 160 + fine * 40 + detail * 20 + 40;
+          colorT = warped * 0.5 + fine * 0.25 + detail * 0.1 + grain;
+          roughVar = fine * 0.1;
+          // Craters with varied sizes
+          for (let c = 0; c < 30; c++) {
             const cx = hash(c + seed, 7) * size;
             const cy = hash(13, c + seed) * size;
-            const cr = 5 + hash(c, c + seed) * 20;
+            const cr = 4 + hash(c, c + seed) * 25;
             const dx = px - cx; const dy = py - cy;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < cr) {
               const r = dist / cr;
-              if (r < 0.7) {
-                bump -= (1 - r / 0.7) * 90;
-                t2 += (1 - r / 0.7) * 0.6;
-              } else {
-                bump += (1 - (r - 0.7) / 0.3) * 35;
+              if (r < 0.65) {
+                bump -= (1 - r / 0.65) * 100;
+                colorT -= (1 - r / 0.65) * 0.3;
+                roughVar += 0.1;
+              } else if (r < 0.85) {
+                bump += (1 - Math.abs(r - 0.75) / 0.1) * 40;
+                colorT += 0.1;
               }
             }
           }
           break;
         }
         case "mars": {
-          const base = fbm(nx * 8 + seed, ny * 8, 6);
-          const ridge = ridgeNoise(nx * 6 + seed, ny * 6, 5);
-          const fine = fbm(nx * 30, ny * 30 + seed, 4, 2, 0.45);
-          bump = base * 100 + ridge * 60 + fine * 40 + 50;
-          t1 = base * 0.5 + ridge * 0.3 + fine * 0.2;
-          const river = Math.abs(Math.sin(nx * 4 + fbm(nx * 3, ny * 2 + seed, 3) * 5));
-          if (river < 0.05) {
-            const depth = 1 - river / 0.05;
-            bump -= depth * 60;
-            t2 += depth * 0.7;
+          const warped = warpedFbm(nx * 6, ny * 6, 6, 1.8, seed);
+          const ridge = ridgeFbm(nx * 8 + seed, ny * 8, 5);
+          const fine = fbm(nx * 28, ny * 28 + seed, 5, 2, 0.45);
+          const detail = fbm(nx * 55 + seed, ny * 55, 3, 2, 0.4);
+          bump = warped * 80 + ridge * 70 + fine * 30 + detail * 15 + 50;
+          colorT = warped * 0.35 + ridge * 0.25 + fine * 0.2 + detail * 0.1 + grain;
+          roughVar = ridge * 0.1 - fine * 0.05;
+          // Dried channels
+          const chan = Math.abs(Math.sin(nx * 5 + warpedFbm(nx * 2, ny * 2, 3, 2, seed + 50) * 6));
+          if (chan < 0.04) {
+            const d = 1 - chan / 0.04;
+            bump -= d * 65;
+            colorT = d * 0.85 + (1 - d) * colorT;
+            roughVar += d * 0.15;
           }
           break;
         }
         case "europa": {
-          const ice = fbm(nx * 5 + seed, ny * 5, 5, 2, 0.4);
-          const fine = fbm(nx * 35, ny * 35 + seed, 4, 2, 0.5);
-          bump = 190 + ice * 25 + fine * 15;
-          t1 = ice * 0.3 + fine * 0.15 + 0.3;
-          const warp = fbm(nx * 4, ny * 4 + seed, 3);
-          const c1 = Math.sin(nx * 18 + warp * 6) + Math.cos(ny * 14 - warp * 5);
-          if (Math.abs(c1) < 0.15) {
-            const d = 1 - Math.abs(c1) / 0.15;
-            bump -= d * d * 110;
-            t2 += d * 0.8;
+          const ice = warpedFbm(nx * 4, ny * 4, 5, 0.8, seed);
+          const fine = fbm(nx * 30 + seed, ny * 30, 5, 2, 0.5);
+          const detail = fbm(nx * 60, ny * 60 + seed, 3, 2, 0.4);
+          bump = 185 + ice * 30 + fine * 15 + detail * 8;
+          colorT = ice * 0.35 + fine * 0.15 + 0.25 + grain;
+          roughVar = -ice * 0.15 + fine * 0.05;
+          // Major cracks (domain-warped)
+          const cWarp = warpedFbm(nx * 3, ny * 3, 3, 2, seed + 20);
+          const c1 = Math.sin(nx * 18 + cWarp * 8) + Math.cos(ny * 14 - cWarp * 6);
+          if (Math.abs(c1) < 0.16) {
+            const d = 1 - Math.abs(c1) / 0.16;
+            bump -= d * d * 120;
+            colorT = d * 0.9 + (1 - d) * colorT;
+            roughVar += d * 0.2;
           }
-          const c2 = Math.sin(nx * 30 + ny * 10 + seed) + Math.cos(ny * 25 - nx * 15);
-          if (Math.abs(c2) < 0.09) {
-            const d = 1 - Math.abs(c2) / 0.09;
-            bump -= d * 50;
-            t2 += d * 0.4;
+          // Fine cracks
+          const c2Warp = fbm(nx * 5, ny * 5 + seed, 3);
+          const c2 = Math.sin(nx * 35 + c2Warp * 4 + ny * 12) + Math.cos(ny * 28 - nx * 18 + c2Warp * 3);
+          if (Math.abs(c2) < 0.1) {
+            const d = 1 - Math.abs(c2) / 0.1;
+            bump -= d * 45;
+            colorT += d * 0.25;
+            roughVar += d * 0.1;
           }
           break;
         }
         case "sun": {
-          const t1n = fbm(nx * 6 + seed, ny * 6, 7, 2.2, 0.55);
-          const t2n = fbm(nx * 12 + 50, ny * 12 + seed, 5, 2, 0.5);
-          const cell = Math.sin(t1n * 10) * Math.cos(t2n * 8);
-          const fine = fbm(nx * 25 + seed, ny * 25, 4, 2, 0.4);
-          bump = 90 + cell * 55 + t1n * 40 + fine * 25;
-          t1 = cell * 0.4 + t1n * 0.3 + 0.3;
-          t2 = Math.max(0, -cell * 0.5) + fine * 0.2;
+          const w1 = warpedFbm(nx * 5, ny * 5, 7, 2.5, seed);
+          const w2 = warpedFbm(nx * 10 + 30, ny * 10, 5, 2, seed + 80);
+          const cell = Math.sin(w1 * 12) * Math.cos(w2 * 9);
+          const fine = fbm(nx * 22 + seed, ny * 22, 5, 2, 0.4);
+          const detail = fbm(nx * 50, ny * 50 + seed, 3, 2, 0.4);
+          bump = 80 + cell * 55 + w1 * 45 + fine * 20 + detail * 12;
+          colorT = w1 * 0.3 + Math.abs(cell) * 0.3 + fine * 0.15 + 0.15 + grain;
+          roughVar = cell * 0.15;
           break;
         }
         case "titan": {
-          const base = fbm(nx * 4 + seed, ny * 4, 5, 2, 0.45);
-          const dune = Math.sin(nx * 24 + base * 7) * 0.5 + 0.5;
-          const fine = fbm(nx * 20 + seed, ny * 20, 4, 2, 0.4);
-          bump = 130 + base * 30 + dune * 55 + fine * 20;
-          t1 = base * 0.3 + dune * 0.5 + fine * 0.15;
-          t2 = (1 - dune) * 0.3;
+          const warped = warpedFbm(nx * 3.5, ny * 3.5, 5, 1.5, seed);
+          const dune = Math.sin(nx * 22 + warped * 8) * 0.5 + 0.5;
+          const fine = fbm(nx * 18 + seed, ny * 18, 5, 2, 0.4);
+          const detail = fbm(nx * 45, ny * 45 + seed, 3, 2, 0.4);
+          bump = 125 + warped * 25 + dune * 55 + fine * 18 + detail * 10;
+          colorT = warped * 0.2 + dune * 0.4 + fine * 0.15 + detail * 0.08 + grain;
+          roughVar = dune * 0.1 - warped * 0.05;
           break;
         }
         case "pluto": {
-          const base = fbm(nx * 6 + seed, ny * 6, 6);
+          const warped = warpedFbm(nx * 5, ny * 5, 6, 1.3, seed);
           const plains = smoothNoise(nx * 2.5 + seed, ny * 2.5);
-          const fine = fbm(nx * 25, ny * 25 + seed, 4, 2, 0.4);
-          const isPlain = plains > 0.52;
+          const fine = fbm(nx * 22 + seed, ny * 22, 5, 2, 0.4);
+          const detail = fbm(nx * 50, ny * 50 + seed, 3, 2, 0.4);
+          const isPlain = plains > 0.5;
           bump = isPlain
-            ? 200 + fine * 20
-            : 150 + base * 65 + fine * 20;
-          t1 = isPlain ? 0.7 + fine * 0.15 : base * 0.5 + fine * 0.15;
-          t2 = isPlain ? 0 : base * 0.2;
+            ? 195 + fine * 18 + detail * 8
+            : 140 + warped * 65 + fine * 18 + detail * 10;
+          colorT = isPlain
+            ? 0.6 + fine * 0.12 + detail * 0.06 + grain
+            : warped * 0.45 + fine * 0.12 + detail * 0.06 + grain;
+          roughVar = isPlain ? -0.1 : warped * 0.12;
           break;
         }
         case "jupiter": {
-          const bandPos = ny * 12 + Math.sin(nx * 5 + seed) * 0.9;
+          const warp = warpedFbm(nx * 4, ny * 4, 4, 1.5, seed);
+          const bandPos = ny * 14 + warp * 3 + Math.sin(nx * 6 + seed) * 0.8;
           const band = Math.sin(bandPos) * 0.5 + 0.5;
-          const turb = fbm(nx * 10 + seed, ny * 10, 5, 2.3, 0.45);
-          const fine = fbm(nx * 25, ny * 25 + seed, 4, 2, 0.45);
-          bump = 110 + band * 55 + turb * 30 + fine * 20;
-          t1 = band * 0.65 + turb * 0.2 + fine * 0.1;
-          t2 = (1 - band) * turb * 0.4;
+          const turb = warpedFbm(nx * 8, ny * 8, 5, 1.8, seed + 40);
+          const fine = fbm(nx * 22 + seed, ny * 22, 5, 2, 0.45);
+          const detail = fbm(nx * 50, ny * 50 + seed, 3, 2, 0.4);
+          bump = 105 + band * 55 + turb * 28 + fine * 18 + detail * 10;
+          colorT = band * 0.5 + turb * 0.2 + fine * 0.1 + detail * 0.05 + grain;
+          roughVar = (1 - band) * 0.1 + turb * 0.05;
           break;
         }
         default: {
-          const terrain = fbm(nx * 8 + seed, ny * 8, 6);
-          const detail = fbm(nx * 18, ny * 18 + seed, 5, 2, 0.45);
-          const fine = fbm(nx * 40 + seed, ny * 40, 3, 2, 0.4);
-          bump = 120 + terrain * 80 + detail * 30 + fine * 15;
-          t1 = terrain * 0.55 + detail * 0.25 + fine * 0.15;
-          t2 = Math.max(0, 0.5 - terrain) * 0.3 + fine * 0.1;
+          // Earth
+          const warped = warpedFbm(nx * 6, ny * 6, 6, 1.6, seed);
+          const detail = warpedFbm(nx * 14, ny * 14, 5, 1.4, seed + 30);
+          const fine = fbm(nx * 35 + seed, ny * 35, 4, 2, 0.45);
+          const grain2 = fbm(nx * 60, ny * 60 + seed, 3, 2, 0.4);
+          bump = 110 + warped * 80 + detail * 30 + fine * 18 + grain2 * 10;
+          colorT = warped * 0.4 + detail * 0.25 + fine * 0.15 + grain2 * 0.08 + grain;
+          roughVar = detail * 0.1 - fine * 0.05;
         }
       }
 
+      // Clamp and write bump
       bumpData[py * size + px] = Math.max(0, Math.min(255, Math.round(bump)));
 
-      const s1 = Math.max(0, Math.min(1, t1));
-      const s2 = Math.max(0, Math.min(1, t2));
-      tmp.copy(colA).lerp(colB, s1).lerp(colC, s2);
+      // Map colorT through the 5-color palette
+      const ct = Math.max(0, Math.min(1, colorT));
+      blendPalette(palette, ct, tmp);
+
+      // Add per-pixel micro-variation to break uniformity
+      const micro = hash(px + seed * 3, py + seed * 7) * 0.06 - 0.03;
+      tmp.r = Math.max(0, Math.min(1, tmp.r + micro));
+      tmp.g = Math.max(0, Math.min(1, tmp.g + micro * 0.8));
+      tmp.b = Math.max(0, Math.min(1, tmp.b + micro * 0.6));
 
       const idx = (py * size + px) * 4;
       colorData[idx]     = Math.round(tmp.r * 255);
       colorData[idx + 1] = Math.round(tmp.g * 255);
       colorData[idx + 2] = Math.round(tmp.b * 255);
       colorData[idx + 3] = 255;
+
+      // Roughness map: base roughness ± variation
+      const rv = Math.max(0, Math.min(1, pal.roughness + roughVar));
+      roughData[py * size + px] = Math.round(rv * 255);
     }
   }
-
-  const bumpMap = new THREE.DataTexture(bumpData, size, size, THREE.RedFormat);
-  bumpMap.wrapS = THREE.RepeatWrapping;
-  bumpMap.wrapT = THREE.RepeatWrapping;
-  bumpMap.magFilter = THREE.LinearFilter;
-  bumpMap.minFilter = THREE.LinearMipmapLinearFilter;
-  bumpMap.generateMipmaps = true;
-  bumpMap.needsUpdate = true;
 
   const colorMap = new THREE.DataTexture(colorData, size, size, THREE.RGBAFormat);
   colorMap.wrapS = THREE.RepeatWrapping;
@@ -291,12 +336,63 @@ function generateTerrainTextures(
   colorMap.generateMipmaps = true;
   colorMap.needsUpdate = true;
 
-  return { bumpMap, colorMap };
+  const roughnessMap = new THREE.DataTexture(roughData, size, size, THREE.RedFormat);
+  roughnessMap.wrapS = THREE.RepeatWrapping;
+  roughnessMap.wrapT = THREE.RepeatWrapping;
+  roughnessMap.magFilter = THREE.LinearFilter;
+  roughnessMap.minFilter = THREE.LinearMipmapLinearFilter;
+  roughnessMap.generateMipmaps = true;
+  roughnessMap.needsUpdate = true;
+
+  // Generate normal map from height data using Sobel filter
+  const normalData = new Uint8Array(size * size * 4);
+  const normalStrength = pal.bumpScale * 3;
+
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      // Sample 3x3 neighborhood (with wrapping)
+      const tl = bumpData[((py - 1 + size) % size) * size + ((px - 1 + size) % size)] / 255;
+      const t  = bumpData[((py - 1 + size) % size) * size + px] / 255;
+      const tr = bumpData[((py - 1 + size) % size) * size + ((px + 1) % size)] / 255;
+      const l  = bumpData[py * size + ((px - 1 + size) % size)] / 255;
+      const r  = bumpData[py * size + ((px + 1) % size)] / 255;
+      const bl = bumpData[((py + 1) % size) * size + ((px - 1 + size) % size)] / 255;
+      const b  = bumpData[((py + 1) % size) * size + px] / 255;
+      const br = bumpData[((py + 1) % size) * size + ((px + 1) % size)] / 255;
+
+      // Sobel operator
+      const dx = (tr + 2 * r + br) - (tl + 2 * l + bl);
+      const dy = (bl + 2 * b + br) - (tl + 2 * t + tr);
+
+      // Normal vector
+      let nx2 = -dx * normalStrength;
+      let ny2 = -dy * normalStrength;
+      let nz = 1;
+      const len = Math.sqrt(nx2 * nx2 + ny2 * ny2 + nz * nz);
+      nx2 /= len; ny2 /= len; nz /= len;
+
+      const idx = (py * size + px) * 4;
+      normalData[idx]     = Math.round((nx2 * 0.5 + 0.5) * 255);
+      normalData[idx + 1] = Math.round((ny2 * 0.5 + 0.5) * 255);
+      normalData[idx + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+      normalData[idx + 3] = 255;
+    }
+  }
+
+  const normalMap = new THREE.DataTexture(normalData, size, size, THREE.RGBAFormat);
+  normalMap.wrapS = THREE.RepeatWrapping;
+  normalMap.wrapT = THREE.RepeatWrapping;
+  normalMap.magFilter = THREE.LinearFilter;
+  normalMap.minFilter = THREE.LinearMipmapLinearFilter;
+  normalMap.generateMipmaps = true;
+  normalMap.needsUpdate = true;
+
+  return { colorMap, roughnessMap, normalMap };
 }
 
 export function PlanetSurface({ surfaceColor, skyColor, planetId }: PlanetSurfaceProps) {
-  const mat = PLANET_MATERIALS[planetId] ?? PLANET_MATERIALS.earth;
-  const { bumpMap, colorMap } = useMemo(
+  const pal = PLANET_PALETTES[planetId] ?? PLANET_PALETTES.earth;
+  const { colorMap, roughnessMap, normalMap } = useMemo(
     () => generateTerrainTextures(planetId, surfaceColor),
     [planetId, surfaceColor],
   );
@@ -311,12 +407,13 @@ export function PlanetSurface({ surfaceColor, skyColor, planetId }: PlanetSurfac
       <meshStandardMaterial
         color={"#ffffff"}
         map={colorMap}
-        roughness={mat.roughness}
-        metalness={mat.metalness}
-        bumpMap={bumpMap}
-        bumpScale={mat.bumpScale}
-        emissive={mat.emissiveColor ?? "#000000"}
-        emissiveIntensity={mat.emissiveIntensity ?? 0}
+        roughnessMap={roughnessMap}
+        roughness={1}
+        metalness={pal.metalness}
+        normalMap={normalMap}
+        normalScale={new THREE.Vector2(1, 1)}
+        emissive={pal.emissiveColor ?? "#000000"}
+        emissiveIntensity={pal.emissiveIntensity ?? 0}
         side={THREE.FrontSide}
       />
     </mesh>
