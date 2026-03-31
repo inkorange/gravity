@@ -10,7 +10,7 @@ interface PlanetSurfaceProps {
 }
 
 const PLANET_RADIUS = 80;
-const TEX_SIZE = 512;
+const TEX_SIZE = 1024;
 
 // Per-planet material properties
 const PLANET_MATERIALS: Record<string, {
@@ -20,208 +20,237 @@ const PLANET_MATERIALS: Record<string, {
   emissiveColor?: string;
   emissiveIntensity?: number;
   secondaryColor?: string;
+  tertiaryColor?: string;
 }> = {
-  earth: { roughness: 0.85, metalness: 0.05, bumpScale: 0.4, secondaryColor: "#3a7a3a" },
-  moon: { roughness: 0.95, metalness: 0.0, bumpScale: 1.0, secondaryColor: "#666666" },
-  mars: { roughness: 0.9, metalness: 0.02, bumpScale: 0.8, secondaryColor: "#a03008" },
-  jupiter: { roughness: 0.7, metalness: 0.1, bumpScale: 0.15, secondaryColor: "#a07838" },
-  sun: { roughness: 0.3, metalness: 0.2, bumpScale: 0.5, emissiveColor: "#ff4400", emissiveIntensity: 0.6, secondaryColor: "#ff2200" },
-  pluto: { roughness: 0.8, metalness: 0.05, bumpScale: 0.6, secondaryColor: "#c0b090" },
-  europa: { roughness: 0.4, metalness: 0.15, bumpScale: 0.4, secondaryColor: "#90b8c0" },
-  titan: { roughness: 0.85, metalness: 0.0, bumpScale: 0.5, secondaryColor: "#886020" },
+  earth:   { roughness: 0.85, metalness: 0.05, bumpScale: 0.5, secondaryColor: "#4a9a3a", tertiaryColor: "#8b6d3f" },
+  moon:    { roughness: 0.95, metalness: 0.0,  bumpScale: 1.2, secondaryColor: "#9a9a9a", tertiaryColor: "#505050" },
+  mars:    { roughness: 0.9,  metalness: 0.02, bumpScale: 0.9, secondaryColor: "#d4713a", tertiaryColor: "#7a2800" },
+  jupiter: { roughness: 0.7,  metalness: 0.1,  bumpScale: 0.2, secondaryColor: "#d4a050", tertiaryColor: "#8a5020" },
+  sun:     { roughness: 0.3,  metalness: 0.2,  bumpScale: 0.6, emissiveColor: "#ff4400", emissiveIntensity: 0.6, secondaryColor: "#ffaa22", tertiaryColor: "#cc2200" },
+  pluto:   { roughness: 0.8,  metalness: 0.05, bumpScale: 0.7, secondaryColor: "#e0d4c0", tertiaryColor: "#907858" },
+  europa:  { roughness: 0.4,  metalness: 0.15, bumpScale: 0.5, secondaryColor: "#d0e8f0", tertiaryColor: "#607080" },
+  titan:   { roughness: 0.85, metalness: 0.0,  bumpScale: 0.6, secondaryColor: "#c09030", tertiaryColor: "#604818" },
 };
 
-/**
- * Simple hash-based pseudo-random for deterministic noise.
- */
+// --- Noise functions ---
+
 function hash(x: number, y: number): number {
-  let h = x * 374761393 + y * 668265263;
+  let h = (x * 374761393 + y * 668265263) | 0;
   h = ((h ^ (h >> 13)) * 1274126177) | 0;
-  return (h ^ (h >> 16)) / 2147483648;
+  return ((h ^ (h >> 16)) >>> 0) / 4294967296;
 }
 
-/**
- * Smooth value noise with cosine interpolation.
- */
 function smoothNoise(x: number, y: number): number {
   const ix = Math.floor(x);
   const iy = Math.floor(y);
   const fx = x - ix;
   const fy = y - iy;
-
-  // Cosine interpolation for smoother results
-  const sx = (1 - Math.cos(fx * Math.PI)) * 0.5;
-  const sy = (1 - Math.cos(fy * Math.PI)) * 0.5;
+  // Quintic interpolation (smoother than cosine, avoids grid artifacts)
+  const sx = fx * fx * fx * (fx * (fx * 6 - 15) + 10);
+  const sy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
 
   const n00 = hash(ix, iy);
   const n10 = hash(ix + 1, iy);
   const n01 = hash(ix, iy + 1);
   const n11 = hash(ix + 1, iy + 1);
 
-  const nx0 = n00 + (n10 - n00) * sx;
-  const nx1 = n01 + (n11 - n01) * sx;
-
-  return nx0 + (nx1 - nx0) * sy;
+  return n00 + (n10 - n00) * sx + (n01 - n00) * sy + (n00 - n10 - n01 + n11) * sx * sy;
 }
 
-/**
- * Fractal Brownian motion — layered noise for natural-looking terrain.
- */
-function fbm(x: number, y: number, octaves: number = 5, lacunarity: number = 2.0, gain: number = 0.5): number {
+function fbm(x: number, y: number, octaves: number, lacunarity: number = 2.0, gain: number = 0.5): number {
   let value = 0;
-  let amplitude = 1;
-  let frequency = 1;
-  let maxValue = 0;
-
+  let amp = 1;
+  let freq = 1;
+  let maxAmp = 0;
   for (let i = 0; i < octaves; i++) {
-    value += smoothNoise(x * frequency, y * frequency) * amplitude;
-    maxValue += amplitude;
-    amplitude *= gain;
-    frequency *= lacunarity;
+    value += smoothNoise(x * freq, y * freq) * amp;
+    maxAmp += amp;
+    amp *= gain;
+    freq *= lacunarity;
   }
-
-  return value / maxValue;
+  return value / maxAmp;
 }
 
-/**
- * Generate procedural bump and color textures using multi-octave noise.
- */
-function generateTerrainTextures(planetId: string, size: number = TEX_SIZE): {
-  bumpMap: THREE.DataTexture;
-  colorMap: THREE.DataTexture;
-} {
+/** Ridge noise — abs of noise inverted for sharp ridgelines */
+function ridgeNoise(x: number, y: number, octaves: number): number {
+  let value = 0;
+  let amp = 1;
+  let freq = 1;
+  let maxAmp = 0;
+  let prev = 1;
+  for (let i = 0; i < octaves; i++) {
+    let n = Math.abs(smoothNoise(x * freq, y * freq) * 2 - 1);
+    n = 1 - n;          // invert — peaks become ridges
+    n = n * n;           // sharpen
+    n *= prev;           // successive ridges grow narrower
+    prev = n;
+    value += n * amp;
+    maxAmp += amp;
+    amp *= 0.5;
+    freq *= 2.1;
+  }
+  return value / maxAmp;
+}
+
+// --- Texture generation ---
+
+function generateTerrainTextures(
+  planetId: string,
+  surfaceColor: string,
+  size: number = TEX_SIZE,
+): { bumpMap: THREE.DataTexture; colorMap: THREE.DataTexture } {
   const bumpData = new Uint8Array(size * size);
   const colorData = new Uint8Array(size * size * 4);
 
   const mat = PLANET_MATERIALS[planetId] ?? PLANET_MATERIALS.earth;
-  const secondary = new THREE.Color(mat.secondaryColor ?? "#888888");
+  const colA = new THREE.Color(surfaceColor);             // primary
+  const colB = new THREE.Color(mat.secondaryColor!);      // secondary
+  const colC = new THREE.Color(mat.tertiaryColor!);       // tertiary (cracks, shadows, accents)
+  const tmp = new THREE.Color();
 
-  // Offset seeds per planet so each looks unique
-  const seed = planetId.charCodeAt(0) * 100 + planetId.charCodeAt(1) * 10;
+  const seed = planetId.charCodeAt(0) * 137 + (planetId.charCodeAt(1) ?? 0) * 31;
 
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const nx = x / size;
-      const ny = y / size;
-      let bumpValue: number;
-      let colorBlend: number; // 0 = base surfaceColor, 1 = secondaryColor
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const nx = px / size;
+      const ny = py / size;
+
+      let bump: number;     // 0-255
+      let t1: number;       // blend primary↔secondary  (0‥1)
+      let t2: number = 0;   // blend toward tertiary      (0‥1)
 
       switch (planetId) {
+        // ─── Moon ─────────────────────────────────────
         case "moon": {
-          // Cratered highlands with smooth maria
-          const terrain = fbm(nx * 8 + seed, ny * 8, 5);
-          bumpValue = terrain * 200 + 55;
-          colorBlend = terrain;
-          // Crater impacts
-          for (let c = 0; c < 22; c++) {
-            const cx = hash(c + seed, 0) * size;
-            const cy = hash(0, c + seed) * size;
-            const cr = 6 + (hash(c, c + seed) * 0.5 + 0.5) * 18;
-            const dx = x - cx;
-            const dy = y - cy;
+          const base = fbm(nx * 10 + seed, ny * 10, 6);
+          const fine = fbm(nx * 40 + seed, ny * 40, 4, 2.2, 0.45);
+          bump = base * 160 + fine * 50 + 40;
+          t1 = base * 0.7 + fine * 0.3;
+          // Craters
+          for (let c = 0; c < 28; c++) {
+            const cx = hash(c + seed, 7) * size;
+            const cy = hash(13, c + seed) * size;
+            const cr = 5 + hash(c, c + seed) * 20;
+            const dx = px - cx; const dy = py - cy;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < cr) {
-              const rim = 1 - dist / cr;
-              bumpValue -= rim * rim * 80;
-              colorBlend -= rim * 0.4;
-              // Raised rim
-              if (dist > cr * 0.75) {
-                bumpValue += (dist / cr - 0.75) * 4 * 40;
+              const r = dist / cr;
+              if (r < 0.7) {
+                bump -= (1 - r / 0.7) * 90;
+                t2 += (1 - r / 0.7) * 0.6;
+              } else {
+                bump += (1 - (r - 0.7) / 0.3) * 35;
               }
             }
           }
           break;
         }
+        // ─── Mars ─────────────────────────────────────
         case "mars": {
-          // Rocky desert with canyons and ridges
-          const base = fbm(nx * 6 + seed, ny * 6, 5);
-          const ridges = Math.abs(fbm(nx * 12 + seed, ny * 12 + 50, 4) - 0.5) * 2;
-          bumpValue = base * 120 + ridges * 60 + 60;
-          colorBlend = base * 0.6 + ridges * 0.3;
-          // Dried river channels
-          const river = Math.abs(Math.sin(nx * 3 + fbm(nx * 2, ny * 2 + seed, 3) * 4));
-          if (river < 0.06) {
-            bumpValue -= (1 - river / 0.06) * 50;
-            colorBlend -= 0.3;
+          const base = fbm(nx * 8 + seed, ny * 8, 6);
+          const ridge = ridgeNoise(nx * 6 + seed, ny * 6, 5);
+          const fine = fbm(nx * 30, ny * 30 + seed, 4, 2, 0.45);
+          bump = base * 100 + ridge * 60 + fine * 40 + 50;
+          t1 = base * 0.5 + ridge * 0.3 + fine * 0.2;
+          // Canyon channels
+          const river = Math.abs(Math.sin(nx * 4 + fbm(nx * 3, ny * 2 + seed, 3) * 5));
+          if (river < 0.05) {
+            const depth = 1 - river / 0.05;
+            bump -= depth * 60;
+            t2 += depth * 0.7;
           }
           break;
         }
+        // ─── Europa ───────────────────────────────────
         case "europa": {
-          // Smooth ice with crack networks
-          const ice = fbm(nx * 4 + seed, ny * 4, 4, 2, 0.4);
-          bumpValue = 200 + ice * 30;
-          colorBlend = ice * 0.4 + 0.3;
-          // Primary cracks
-          const c1 = Math.sin(nx * 15 + fbm(nx * 3, ny * 3 + seed, 3) * 5)
-                    + Math.cos(ny * 12 - fbm(nx * 2 + seed, ny * 2, 3) * 4);
-          if (Math.abs(c1) < 0.18) {
-            const depth = 1 - Math.abs(c1) / 0.18;
-            bumpValue -= depth * 100;
-            colorBlend = depth * 0.1;
+          const ice = fbm(nx * 5 + seed, ny * 5, 5, 2, 0.4);
+          const fine = fbm(nx * 35, ny * 35 + seed, 4, 2, 0.5);
+          bump = 190 + ice * 25 + fine * 15;
+          t1 = ice * 0.3 + fine * 0.15 + 0.3;
+          // Major cracks
+          const warp = fbm(nx * 4, ny * 4 + seed, 3);
+          const c1 = Math.sin(nx * 18 + warp * 6) + Math.cos(ny * 14 - warp * 5);
+          if (Math.abs(c1) < 0.15) {
+            const d = 1 - Math.abs(c1) / 0.15;
+            bump -= d * d * 110;
+            t2 += d * 0.8;
           }
-          // Secondary cracks (finer)
-          const c2 = Math.sin(nx * 25 + ny * 8) + Math.cos(ny * 20 - nx * 12);
-          if (Math.abs(c2) < 0.1) {
-            bumpValue -= (1 - Math.abs(c2) / 0.1) * 40;
-            colorBlend -= 0.15;
+          // Minor cracks
+          const c2 = Math.sin(nx * 30 + ny * 10 + seed) + Math.cos(ny * 25 - nx * 15);
+          if (Math.abs(c2) < 0.09) {
+            const d = 1 - Math.abs(c2) / 0.09;
+            bump -= d * 50;
+            t2 += d * 0.4;
           }
           break;
         }
+        // ─── Sun ──────────────────────────────────────
         case "sun": {
-          // Turbulent convection cells
-          const turb1 = fbm(nx * 5 + seed, ny * 5, 6, 2.2, 0.55);
-          const turb2 = fbm(nx * 8 + 30, ny * 8 + seed, 5, 2, 0.5);
-          const cell = Math.sin(turb1 * 8) * Math.cos(turb2 * 6);
-          bumpValue = 100 + cell * 60 + turb1 * 40;
-          colorBlend = cell * 0.5 + turb1 * 0.3 + 0.3;
+          const t1n = fbm(nx * 6 + seed, ny * 6, 7, 2.2, 0.55);
+          const t2n = fbm(nx * 12 + 50, ny * 12 + seed, 5, 2, 0.5);
+          const cell = Math.sin(t1n * 10) * Math.cos(t2n * 8);
+          const fine = fbm(nx * 25 + seed, ny * 25, 4, 2, 0.4);
+          bump = 90 + cell * 55 + t1n * 40 + fine * 25;
+          t1 = cell * 0.4 + t1n * 0.3 + 0.3;
+          t2 = Math.max(0, -cell * 0.5) + fine * 0.2;
           break;
         }
+        // ─── Titan ────────────────────────────────────
         case "titan": {
-          // Smooth with methane dune ridges
-          const smooth = fbm(nx * 3 + seed, ny * 3, 4, 2, 0.4);
-          const dunes = (Math.sin(nx * 20 + smooth * 6) * 0.5 + 0.5);
-          bumpValue = 140 + smooth * 30 + dunes * 50;
-          colorBlend = smooth * 0.3 + dunes * 0.5;
+          const base = fbm(nx * 4 + seed, ny * 4, 5, 2, 0.45);
+          const dune = Math.sin(nx * 24 + base * 7) * 0.5 + 0.5;
+          const fine = fbm(nx * 20 + seed, ny * 20, 4, 2, 0.4);
+          bump = 130 + base * 30 + dune * 55 + fine * 20;
+          t1 = base * 0.3 + dune * 0.5 + fine * 0.15;
+          t2 = (1 - dune) * 0.3;
           break;
         }
+        // ─── Pluto ────────────────────────────────────
         case "pluto": {
-          // Icy terrain with smooth nitrogen plains and rough highlands
-          const base = fbm(nx * 5 + seed, ny * 5, 5);
-          const plains = smoothNoise(nx * 2 + seed, ny * 2);
-          // Heart-shaped smooth region (Sputnik Planitia analogue)
-          const isPlain = plains > 0.55;
-          bumpValue = isPlain
-            ? 200 + fbm(nx * 8, ny * 8 + seed, 3) * 15
-            : 160 + base * 60;
-          colorBlend = isPlain ? 0.7 : base * 0.5;
+          const base = fbm(nx * 6 + seed, ny * 6, 6);
+          const plains = smoothNoise(nx * 2.5 + seed, ny * 2.5);
+          const fine = fbm(nx * 25, ny * 25 + seed, 4, 2, 0.4);
+          const isPlain = plains > 0.52;
+          bump = isPlain
+            ? 200 + fine * 20
+            : 150 + base * 65 + fine * 20;
+          t1 = isPlain ? 0.7 + fine * 0.15 : base * 0.5 + fine * 0.15;
+          t2 = isPlain ? 0 : base * 0.2;
           break;
         }
+        // ─── Jupiter ──────────────────────────────────
         case "jupiter": {
-          // Atmospheric bands with turbulence
-          const bandBase = ny * 10 + Math.sin(nx * 4 + seed) * 0.8;
-          const band = Math.sin(bandBase) * 0.5 + 0.5;
-          const turb = fbm(nx * 8 + seed, ny * 8, 4, 2.5, 0.45);
-          bumpValue = 120 + band * 50 + turb * 30;
-          colorBlend = band * 0.7 + turb * 0.2;
+          const bandPos = ny * 12 + Math.sin(nx * 5 + seed) * 0.9;
+          const band = Math.sin(bandPos) * 0.5 + 0.5;
+          const turb = fbm(nx * 10 + seed, ny * 10, 5, 2.3, 0.45);
+          const fine = fbm(nx * 25, ny * 25 + seed, 4, 2, 0.45);
+          bump = 110 + band * 55 + turb * 30 + fine * 20;
+          t1 = band * 0.65 + turb * 0.2 + fine * 0.1;
+          t2 = (1 - band) * turb * 0.4;
           break;
         }
+        // ─── Earth (default) ──────────────────────────
         default: {
-          // Earth — varied terrain
-          const terrain = fbm(nx * 6 + seed, ny * 6, 5);
-          const detail = fbm(nx * 15, ny * 15 + seed, 3);
-          bumpValue = 130 + terrain * 80 + detail * 20;
-          colorBlend = terrain * 0.6 + detail * 0.2;
+          const terrain = fbm(nx * 8 + seed, ny * 8, 6);
+          const detail = fbm(nx * 18, ny * 18 + seed, 5, 2, 0.45);
+          const fine = fbm(nx * 40 + seed, ny * 40, 3, 2, 0.4);
+          bump = 120 + terrain * 80 + detail * 30 + fine * 15;
+          t1 = terrain * 0.55 + detail * 0.25 + fine * 0.15;
+          t2 = Math.max(0, 0.5 - terrain) * 0.3 + fine * 0.1;
         }
       }
 
-      bumpData[y * size + x] = Math.max(0, Math.min(255, Math.round(bumpValue)));
+      bumpData[py * size + px] = Math.max(0, Math.min(255, Math.round(bump)));
 
-      // Blend surface color with secondary color based on terrain
-      const t = Math.max(0, Math.min(1, colorBlend));
-      const idx = (y * size + x) * 4;
-      colorData[idx]     = Math.round(secondary.r * 255 * (0.6 + t * 0.8));
-      colorData[idx + 1] = Math.round(secondary.g * 255 * (0.6 + t * 0.8));
-      colorData[idx + 2] = Math.round(secondary.b * 255 * (0.6 + t * 0.8));
+      // Three-way color blend: primary → secondary (t1), then toward tertiary (t2)
+      const s1 = Math.max(0, Math.min(1, t1));
+      const s2 = Math.max(0, Math.min(1, t2));
+      tmp.copy(colA).lerp(colB, s1).lerp(colC, s2);
+
+      const idx = (py * size + px) * 4;
+      colorData[idx]     = Math.round(tmp.r * 255);
+      colorData[idx + 1] = Math.round(tmp.g * 255);
+      colorData[idx + 2] = Math.round(tmp.b * 255);
       colorData[idx + 3] = 255;
     }
   }
@@ -247,17 +276,16 @@ function generateTerrainTextures(planetId: string, size: number = TEX_SIZE): {
 
 export function PlanetSurface({ surfaceColor, skyColor, planetId }: PlanetSurfaceProps) {
   const mat = PLANET_MATERIALS[planetId] ?? PLANET_MATERIALS.earth;
-  const { bumpMap, colorMap } = useMemo(() => generateTerrainTextures(planetId), [planetId]);
+  const { bumpMap, colorMap } = useMemo(
+    () => generateTerrainTextures(planetId, surfaceColor),
+    [planetId, surfaceColor],
+  );
 
   return (
-    <mesh
-      position={[0, -PLANET_RADIUS, 0]}
-      receiveShadow
-    >
-      {/* Partial sphere: top ~60% gives visible curvature at horizon */}
+    <mesh position={[0, -PLANET_RADIUS, 0]} receiveShadow>
       <sphereGeometry args={[PLANET_RADIUS, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
       <meshStandardMaterial
-        color={surfaceColor}
+        color={"#ffffff"}
         map={colorMap}
         roughness={mat.roughness}
         metalness={mat.metalness}
