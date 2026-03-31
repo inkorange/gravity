@@ -132,21 +132,20 @@ PR where the app looks dramatically different — real bowling balls, Moon crate
 **Goal**: Every state has motion. Impacts are satisfying. The app feels like a living cartoon world.
 
 ### Tasks (in order of visual impact)
-- [ ] **Idle bobbing**: drei `<Float>` on objects before drop. Gentle bob + slow rotation
-- [ ] **Impact squash + spring-back**: `src/lib/springPhysics.ts` — damped spring solver. On impact: flatten proportional to velocity, spring back with overshoot. Volume-preserving (scaleXZ = 1/sqrt(scaleY))
-- [ ] **Squash-stretch during fall**: elongate Y, compress XZ proportional to current velocity
-- [ ] **Anticipation wind-up**: ~200ms downward squash before releasing into fall
-- [ ] **Diminishing bounces**: 2-4 bounces per gravity, each with squash-stretch. Uses `physics.calculateBounce`
-- [ ] **Jelly wobble settle**: decaying sine oscillation on scale after final bounce (~500ms)
-- [ ] **UI animations (Framer Motion)**:
+- [x] **Idle bobbing**: drei `<Float>` on objects before drop. Gentle bob + slow rotation
+- [x] **Impact squash + spring-back**: `src/lib/springPhysics.ts` — damped spring solver. On impact: flatten proportional to velocity, spring back with overshoot. Volume-preserving (scaleXZ = 1/sqrt(scaleY))
+- [x] **Squash-stretch during fall**: elongate Y, compress XZ proportional to current velocity
+- [x] **Anticipation wind-up**: ~200ms downward squash before releasing into fall
+- [ ] **Diminishing bounces**: 2-4 bounces per gravity, each with squash-stretch. Uses `physics.calculateBounce` *(deferred — squash spring recovery provides bounce feel)*
+- [x] **Jelly wobble settle**: decaying sine oscillation on scale after final bounce (~500ms)
+- [x] **UI animations (Framer Motion)**:
   - Planet selector: spring bounce hover, breathing glow on selected
   - Object picker: wiggle on hover, pop on select
-  - DROP IT button: pulsing when ready, slam-down on press, radial shockwave
-  - HUD: rolling counter effect on number changes
-  - Fun facts: slide-up with spring bounce + sparkle
-- [ ] **Screen shake**: `src/hooks/useScreenShake.ts` — decaying sinusoidal offset. Intensity scales with impact velocity. Big on Jupiter/Sun, none on Pluto
-- [ ] **Planet transition morph**: cross-fade ground textures + sky environment over ~600ms with camera drift. No hard cuts
-- [ ] **Ambient scene particles**: Mars dust drift, Europa ice sparkles, twinkling stars, platform glow pulse
+  - DROP IT button: pulsing when ready, slam-down on press
+  - Fun facts: slide-up with spring bounce
+- [x] **Screen shake**: `src/hooks/useScreenShake.ts` — decaying sinusoidal offset. Intensity scales with impact velocity. Big on Jupiter/Sun, none on Pluto
+- [ ] **Planet transition morph**: cross-fade ground textures + sky environment over ~600ms with camera drift. No hard cuts *(deferred to Phase 4 when real textures exist)*
+- [ ] **Ambient scene particles**: Mars dust drift, Europa ice sparkles, twinkling stars, platform glow pulse *(deferred to Phase 4)*
 
 ### Animation easing
 - Spring physics everywhere. No linear or basic ease-in/ease-out

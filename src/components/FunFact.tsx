@@ -13,20 +13,26 @@ export function FunFact({ planet, phase }: FunFactProps) {
   const fact = useMemo(() => {
     const facts = planet.funFacts;
     return facts[Math.floor(Math.random() * facts.length)];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planet.id, phase === "landed"]);
 
   return (
     <AnimatePresence>
       {phase === "landed" && (
         <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -20, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.3 }}
+          initial={{ y: 40, opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: -20, opacity: 0, scale: 0.95 }}
+          transition={{
+            type: "spring",
+            stiffness: 260,
+            damping: 15,
+            delay: 0.4,
+          }}
           className="absolute bottom-12 left-3 right-3 z-10"
         >
           <div
-            className="rounded-xl px-3 py-2 text-center text-sm font-semibold"
+            className="rounded-xl px-3 py-2 text-center text-sm font-semibold backdrop-blur-sm"
             style={{
               backgroundColor: planet.color + "20",
               color: planet.color,
