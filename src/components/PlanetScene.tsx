@@ -121,6 +121,7 @@ export function PlanetScene({ planet, object, phase, side, onLand }: PlanetScene
         fallbackColor={object.fallbackColor}
         scale={object.scale}
         squashFactor={object.squashFactor}
+        mass={object.mass}
         side={side}
         planetId={planet.id}
         onLand={onLand}

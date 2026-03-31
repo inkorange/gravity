@@ -9,6 +9,7 @@ import { simStore } from "@/hooks/useSimStore";
 import { springStep, wobble } from "@/lib/springPhysics";
 import { calculateSquash, getMaxVelocity } from "@/lib/physics";
 import { ImpactParticles } from "./ImpactParticles";
+import { ShockwaveRing } from "./ShockwaveRing";
 import type { DropPhase } from "@/types";
 
 interface DroppableObjectProps {
@@ -18,6 +19,7 @@ interface DroppableObjectProps {
   fallbackColor: string;
   scale: number;
   squashFactor: number;
+  mass: number;
   side: "left" | "right";
   planetId: string;
   onLand?: () => void;
@@ -178,6 +180,7 @@ export function DroppableObject({
   fallbackColor,
   scale,
   squashFactor,
+  mass,
   side,
   planetId,
   onLand,
@@ -274,6 +277,14 @@ export function DroppableObject({
         planetId={planetId}
         gravity={gravity}
         impactVelocity={sim.impactVelocity}
+        phase={phase}
+        landed={sim.landed}
+      />
+      <ShockwaveRing
+        planetId={planetId}
+        gravity={gravity}
+        impactVelocity={sim.impactVelocity}
+        objectMass={mass}
         phase={phase}
         landed={sim.landed}
       />
