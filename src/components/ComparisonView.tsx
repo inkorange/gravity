@@ -100,7 +100,7 @@ export function ComparisonView() {
 
         {/* Single Canvas spanning both panels */}
         <Canvas
-          className="!absolute inset-0 z-0"
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
           shadows
           camera={{ position: [0, 5, 12], fov: 50 }}
           eventSource={canvasContainerRef}

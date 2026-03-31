@@ -3,7 +3,6 @@
 import { ContactShadows, Stars } from "@react-three/drei";
 import { PlanetSurface } from "./PlanetSurface";
 import { DroppableObject } from "./DroppableObject";
-import { PostProcessing } from "./PostProcessing";
 import type { CelestialBody, DroppableObject as DroppableObjectType, DropPhase } from "@/types";
 
 // Planets with no atmosphere get a starfield
@@ -91,8 +90,6 @@ export function PlanetScene({ planet, object, phase, side, onLand }: PlanetScene
         side={side}
         onLand={onLand}
       />
-
-      <PostProcessing planetId={planet.id} />
 
       <color attach="background" args={[planet.skyColor]} />
     </>
