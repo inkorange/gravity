@@ -58,7 +58,150 @@ const PLANET_PALETTES: Record<string, {
   },
 };
 
+// ─── Crater configuration per planet ────────────────────────
+interface CraterLayer {
+  count: number;
+  minR: number;
+  maxR: number;
+  depthMul: number;    // bump depression strength
+  colorMul: number;    // color darkening strength
+  rimMul: number;      // rim elevation strength
+  rimColor: number;    // rim brightening
+  roughAdd: number;    // roughness added inside crater
+  seedOffset: number;  // unique offset per layer
+}
+
+const PLANET_CRATERS: Record<string, CraterLayer[]> = {
+  moon: [
+    { count: 6, minR: 40, maxR: 80, depthMul: 80, colorMul: 0.25, rimMul: 35, rimColor: 0.1, roughAdd: 0.06, seedOffset: 500 },
+    { count: 20, minR: 14, maxR: 35, depthMul: 100, colorMul: 0.3, rimMul: 40, rimColor: 0.1, roughAdd: 0.1, seedOffset: 1500 },
+    { count: 50, minR: 5, maxR: 14, depthMul: 55, colorMul: 0.2, rimMul: 20, rimColor: 0.07, roughAdd: 0.05, seedOffset: 2500 },
+    { count: 80, minR: 2, maxR: 6, depthMul: 28, colorMul: 0.1, rimMul: 10, rimColor: 0.04, roughAdd: 0.02, seedOffset: 3500 },
+  ],
+  mars: [
+    { count: 4, minR: 40, maxR: 75, depthMul: 65, colorMul: 0.18, rimMul: 28, rimColor: 0.07, roughAdd: 0.05, seedOffset: 600 },
+    { count: 15, minR: 14, maxR: 30, depthMul: 80, colorMul: 0.22, rimMul: 32, rimColor: 0.08, roughAdd: 0.08, seedOffset: 1600 },
+    { count: 40, minR: 5, maxR: 14, depthMul: 35, colorMul: 0.12, rimMul: 12, rimColor: 0.04, roughAdd: 0.03, seedOffset: 2600 },
+    { count: 60, minR: 2, maxR: 6, depthMul: 18, colorMul: 0.06, rimMul: 6, rimColor: 0.02, roughAdd: 0.01, seedOffset: 3600 },
+  ],
+  europa: [
+    { count: 3, minR: 25, maxR: 50, depthMul: 40, colorMul: 0.12, rimMul: 18, rimColor: 0.06, roughAdd: 0.04, seedOffset: 650 },
+    { count: 12, minR: 8, maxR: 20, depthMul: 55, colorMul: 0.14, rimMul: 22, rimColor: 0.07, roughAdd: 0.06, seedOffset: 1650 },
+    { count: 30, minR: 3, maxR: 9, depthMul: 28, colorMul: 0.09, rimMul: 10, rimColor: 0.03, roughAdd: 0.02, seedOffset: 2650 },
+  ],
+  titan: [
+    { count: 3, minR: 30, maxR: 60, depthMul: 45, colorMul: 0.14, rimMul: 20, rimColor: 0.06, roughAdd: 0.04, seedOffset: 900 },
+    { count: 12, minR: 10, maxR: 22, depthMul: 58, colorMul: 0.16, rimMul: 24, rimColor: 0.07, roughAdd: 0.06, seedOffset: 1900 },
+    { count: 30, minR: 3, maxR: 9, depthMul: 25, colorMul: 0.09, rimMul: 10, rimColor: 0.03, roughAdd: 0.02, seedOffset: 2900 },
+  ],
+  pluto: [
+    { count: 3, minR: 30, maxR: 55, depthMul: 55, colorMul: 0.17, rimMul: 25, rimColor: 0.08, roughAdd: 0.05, seedOffset: 700 },
+    { count: 12, minR: 10, maxR: 22, depthMul: 75, colorMul: 0.22, rimMul: 30, rimColor: 0.09, roughAdd: 0.08, seedOffset: 1700 },
+    { count: 30, minR: 3, maxR: 9, depthMul: 38, colorMul: 0.13, rimMul: 14, rimColor: 0.05, roughAdd: 0.03, seedOffset: 2700 },
+  ],
+  jupiter: [],
+  earth: [],
+  sun: [],
+};
+
+// Pre-computed crater with position, radius, and parent layer info
+interface PreCrater {
+  cx: number; cy: number; cr: number; cr2: number;
+  depthMul: number; colorMul: number; rimMul: number;
+  rimColor: number; roughAdd: number;
+}
+
+// Spatial grid for O(1) crater lookups per pixel
+interface CraterGrid {
+  cells: PreCrater[][];
+  cellSize: number;
+  cols: number;
+  rows: number;
+}
+
+function buildCraterGrid(layers: CraterLayer[], size: number, seed: number): CraterGrid {
+  // Find max crater radius to set cell size
+  let maxR = 0;
+  for (const layer of layers) maxR = Math.max(maxR, layer.maxR);
+  const cellSize = Math.max(maxR * 2, 16);
+  const cols = Math.ceil(size / cellSize);
+  const rows = Math.ceil(size / cellSize);
+  const cells: PreCrater[][] = new Array(cols * rows);
+  for (let i = 0; i < cells.length; i++) cells[i] = [];
+
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    const so = layer.seedOffset + li * 317;
+    for (let c = 0; c < layer.count; c++) {
+      // Bias crater placement toward center (visible area is ~15% around center)
+      // Use a gaussian-like distribution: average two uniform randoms
+      const u1x = craterHash(c, so + seed);
+      const u2x = craterHash(c + 150000, so + seed);
+      const u1y = craterHash(c + 50000, so + seed);
+      const u2y = craterHash(c + 200000, so + seed);
+      const cx = ((u1x + u2x) / 2) * size;
+      const cy = ((u1y + u2y) / 2) * size;
+      const cr = layer.minR + craterHash(c + 100000, so + seed) * (layer.maxR - layer.minR);
+      const crater: PreCrater = {
+        cx, cy, cr, cr2: cr * cr,
+        depthMul: layer.depthMul, colorMul: layer.colorMul,
+        rimMul: layer.rimMul, rimColor: layer.rimColor, roughAdd: layer.roughAdd,
+      };
+      // Insert into all grid cells the crater could overlap
+      const minCol = Math.max(0, Math.floor((cx - cr) / cellSize));
+      const maxCol = Math.min(cols - 1, Math.floor((cx + cr) / cellSize));
+      const minRow = Math.max(0, Math.floor((cy - cr) / cellSize));
+      const maxRow = Math.min(rows - 1, Math.floor((cy + cr) / cellSize));
+      for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+          cells[row * cols + col].push(crater);
+        }
+      }
+    }
+  }
+  return { cells, cellSize, cols, rows };
+}
+
+function applyCratersGrid(
+  grid: CraterGrid,
+  px: number, py: number,
+  out: { bump: number; colorT: number; roughVar: number },
+) {
+  const col = Math.floor(px / grid.cellSize);
+  const row = Math.floor(py / grid.cellSize);
+  if (col < 0 || col >= grid.cols || row < 0 || row >= grid.rows) return;
+  const bucket = grid.cells[row * grid.cols + col];
+  for (let i = 0; i < bucket.length; i++) {
+    const cr = bucket[i];
+    const dx = px - cr.cx; const dy = py - cr.cy;
+    const dist2 = dx * dx + dy * dy;
+    if (dist2 < cr.cr2) {
+      const dist = Math.sqrt(dist2);
+      const r = dist / cr.cr;
+      if (r < 0.65) {
+        const t = 1 - r / 0.65;
+        out.bump -= t * cr.depthMul;
+        out.colorT -= t * cr.colorMul;
+        out.roughVar += cr.roughAdd;
+      } else if (r < 0.85) {
+        const t = 1 - Math.abs(r - 0.75) / 0.1;
+        out.bump += t * cr.rimMul;
+        out.colorT += cr.rimColor;
+      }
+    }
+  }
+}
+
 // ─── Noise primitives ───────────────────────────────────────
+
+// High-quality hash for crater placement — returns uniform 0..1
+function craterHash(a: number, b: number): number {
+  let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b ^ 0x517cc1b7, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h = h ^ (h >>> 16);
+  return (h >>> 0) / 4294967296;
+}
 
 function hash(x: number, y: number): number {
   let h = (x * 374761393 + y * 668265263) | 0;
@@ -159,6 +302,10 @@ function generateTerrainTextures(
 
   const seed = planetId.charCodeAt(0) * 137 + (planetId.charCodeAt(1) ?? 0) * 31;
 
+  // Build spatial grid for craters once before pixel loop
+  const craterLayers = PLANET_CRATERS[planetId] ?? PLANET_CRATERS.earth;
+  const craterGrid = craterLayers.length > 0 ? buildCraterGrid(craterLayers, size, seed) : null;
+
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       const nx = px / size;
@@ -177,25 +324,7 @@ function generateTerrainTextures(
           bump = warped * 160 + fine * 40 + detail * 20 + 40;
           colorT = warped * 0.5 + fine * 0.25 + detail * 0.1 + grain;
           roughVar = fine * 0.1;
-          // Craters with varied sizes
-          for (let c = 0; c < 30; c++) {
-            const cx = hash(c + seed, 7) * size;
-            const cy = hash(13, c + seed) * size;
-            const cr = 4 + hash(c, c + seed) * 25;
-            const dx = px - cx; const dy = py - cy;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < cr) {
-              const r = dist / cr;
-              if (r < 0.65) {
-                bump -= (1 - r / 0.65) * 100;
-                colorT -= (1 - r / 0.65) * 0.3;
-                roughVar += 0.1;
-              } else if (r < 0.85) {
-                bump += (1 - Math.abs(r - 0.75) / 0.1) * 40;
-                colorT += 0.1;
-              }
-            }
-          }
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
           break;
         }
         case "mars": {
@@ -214,6 +343,7 @@ function generateTerrainTextures(
             colorT = d * 0.85 + (1 - d) * colorT;
             roughVar += d * 0.15;
           }
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
           break;
         }
         case "europa": {
@@ -241,6 +371,7 @@ function generateTerrainTextures(
             colorT += d * 0.25;
             roughVar += d * 0.1;
           }
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
           break;
         }
         case "sun": {
@@ -262,6 +393,7 @@ function generateTerrainTextures(
           bump = 125 + warped * 25 + dune * 55 + fine * 18 + detail * 10;
           colorT = warped * 0.2 + dune * 0.4 + fine * 0.15 + detail * 0.08 + grain;
           roughVar = dune * 0.1 - warped * 0.05;
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
           break;
         }
         case "pluto": {
@@ -277,6 +409,7 @@ function generateTerrainTextures(
             ? 0.6 + fine * 0.12 + detail * 0.06 + grain
             : warped * 0.45 + fine * 0.12 + detail * 0.06 + grain;
           roughVar = isPlain ? -0.1 : warped * 0.12;
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
           break;
         }
         case "jupiter": {
@@ -289,6 +422,7 @@ function generateTerrainTextures(
           bump = 105 + band * 55 + turb * 28 + fine * 18 + detail * 10;
           colorT = band * 0.5 + turb * 0.2 + fine * 0.1 + detail * 0.05 + grain;
           roughVar = (1 - band) * 0.1 + turb * 0.05;
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
           break;
         }
         default: {
@@ -300,6 +434,7 @@ function generateTerrainTextures(
           bump = 110 + warped * 80 + detail * 30 + fine * 18 + grain2 * 10;
           colorT = warped * 0.4 + detail * 0.25 + fine * 0.15 + grain2 * 0.08 + grain;
           roughVar = detail * 0.1 - fine * 0.05;
+          if (craterGrid) { const _o = { bump, colorT, roughVar }; applyCratersGrid(craterGrid, px, py, _o); bump = _o.bump; colorT = _o.colorT; roughVar = _o.roughVar; }
         }
       }
 

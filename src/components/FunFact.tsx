@@ -29,10 +29,10 @@ export function FunFact({ planet, phase }: FunFactProps) {
             damping: 15,
             delay: 0.4,
           }}
-          className="absolute bottom-12 left-3 right-3 z-10"
+          className="absolute bottom-[80px] md:bottom-12 left-2 right-2 md:left-3 md:right-3 z-10"
         >
           <div
-            className="rounded-xl px-3 py-2 text-center text-sm font-semibold backdrop-blur-sm"
+            className="rounded-xl px-2 py-1.5 md:px-3 md:py-2 text-center text-xs md:text-sm font-semibold backdrop-blur-sm"
             style={{
               backgroundColor: planet.color + "20",
               color: planet.color,

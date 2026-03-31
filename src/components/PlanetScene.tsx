@@ -1,11 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
+import * as THREE from "three";
+import { useThree } from "@react-three/fiber";
 import { ContactShadows, Stars } from "@react-three/drei";
 import { PlanetSurface } from "./PlanetSurface";
 import { DroppableObject } from "./DroppableObject";
 import { AmbientParticles } from "./AmbientParticles";
 import { SkyDome } from "./SkyDome";
 import type { CelestialBody, DroppableObject as DroppableObjectType, DropPhase } from "@/types";
+
+function ResponsiveCamera() {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    const aspect = size.width / size.height;
+    const cam = camera as THREE.PerspectiveCamera;
+    // Wider FOV on narrow/portrait viewports so more scene is visible
+    cam.fov = aspect < 1 ? 65 : 50;
+    cam.updateProjectionMatrix();
+  }, [camera, size]);
+  return null;
+}
 
 // Planets with no atmosphere get a starfield
 const AIRLESS_BODIES = new Set(["moon", "europa", "pluto"]);
@@ -121,12 +136,14 @@ export function PlanetScene({ planet, object, phase, side, onLand }: PlanetScene
         fallbackColor={object.fallbackColor}
         scale={object.scale}
         squashFactor={object.squashFactor}
+        restitution={object.restitution}
         mass={object.mass}
         side={side}
         planetId={planet.id}
         onLand={onLand}
       />
 
+      <ResponsiveCamera />
       <color attach="background" args={[planet.skyColor]} />
     </>
   );

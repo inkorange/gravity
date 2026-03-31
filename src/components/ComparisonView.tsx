@@ -70,21 +70,12 @@ export function ComparisonView() {
         <div ref={leftRef} className="relative flex-1 min-h-0 overflow-hidden">
           <HUD side="left" planet={leftPlanet} />
           <FunFact planet={leftPlanet} phase={phase} />
-          {/* Vignette overlay */}
           <div
             className="absolute inset-0 pointer-events-none z-[1]"
             style={{
               background: `radial-gradient(ellipse at center, transparent 50%, ${leftPlanet.skyColor}90 100%)`,
             }}
           />
-          <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none z-10">
-            <span
-              className="text-base font-bold px-3 py-1 rounded-full"
-              style={{ backgroundColor: leftPlanet.color + "30", color: leftPlanet.color }}
-            >
-              {leftPlanet.emoji} {leftPlanet.name} ({leftPlanet.relativeGravity}g)
-            </span>
-          </div>
         </div>
 
         {/* Divider */}
@@ -95,20 +86,29 @@ export function ComparisonView() {
         <div ref={rightRef} className="relative flex-1 min-h-0 overflow-hidden">
           <HUD side="right" planet={rightPlanet} />
           <FunFact planet={rightPlanet} phase={phase} />
-          {/* Vignette overlay */}
           <div
             className="absolute inset-0 pointer-events-none z-[1]"
             style={{
               background: `radial-gradient(ellipse at center, transparent 50%, ${rightPlanet.skyColor}90 100%)`,
             }}
           />
-          <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none z-10">
-            <span
-              className="text-base font-bold px-3 py-1 rounded-full"
-              style={{ backgroundColor: rightPlanet.color + "30", color: rightPlanet.color }}
-            >
-              {rightPlanet.emoji} {rightPlanet.name} ({rightPlanet.relativeGravity}g)
-            </span>
+        </div>
+
+        {/* Planet selectors — outside overflow-hidden panels */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col md:flex-row pointer-events-none">
+          <div className="flex-1 pointer-events-auto">
+            <PlanetSelector
+              selectedId={leftPlanetId}
+              onSelect={setLeftPlanet}
+              side="left"
+            />
+          </div>
+          <div className="flex-1 pointer-events-auto">
+            <PlanetSelector
+              selectedId={rightPlanetId}
+              onSelect={setRightPlanet}
+              side="right"
+            />
           </div>
         </div>
 
@@ -138,24 +138,6 @@ export function ComparisonView() {
             />
           </View>
         </Canvas>
-      </div>
-
-      {/* Planet selectors below the scenes */}
-      <div className="flex flex-col md:flex-row border-t border-white/10">
-        <div className="flex-1 border-b md:border-b-0 md:border-r border-white/10">
-          <PlanetSelector
-            selectedId={leftPlanetId}
-            onSelect={setLeftPlanet}
-            side="left"
-          />
-        </div>
-        <div className="flex-1">
-          <PlanetSelector
-            selectedId={rightPlanetId}
-            onSelect={setRightPlanet}
-            side="right"
-          />
-        </div>
       </div>
     </div>
   );

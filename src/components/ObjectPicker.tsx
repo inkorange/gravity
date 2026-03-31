@@ -9,7 +9,7 @@ export function ObjectPicker() {
   const disabled = phase === "dropping";
 
   return (
-    <div className="flex gap-2 justify-center px-3 py-2" role="radiogroup" aria-label="Object selector">
+    <div className="flex gap-1.5 md:gap-2 md:justify-center px-3 py-1 md:py-2 overflow-x-auto max-w-full scrollbar-hide" role="radiogroup" aria-label="Object selector">
       {objects.map((obj) => {
         const isSelected = obj.id === objectId;
         return (
@@ -22,7 +22,7 @@ export function ObjectPicker() {
             whileHover={disabled ? {} : { scale: 1.1, rotate: [-2, 2, 0] }}
             whileTap={disabled ? {} : { scale: 0.92 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
-            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl min-w-[60px] cursor-pointer transition-colors"
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl min-w-[52px] md:min-w-[60px] flex-shrink-0 cursor-pointer transition-colors"
             style={{
               backgroundColor: isSelected ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)",
               borderWidth: 2,
